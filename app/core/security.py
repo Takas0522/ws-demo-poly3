@@ -1,6 +1,7 @@
 """
 Security utilities for password hashing and JWT token handling.
 """
+import os
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 from jose import JWTError, jwt
@@ -9,6 +10,61 @@ from app.core.config import settings
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Load RSA keys for RS256
+def _load_private_key() -> str:
+    """Load RSA private key from file."""
+    key_path = settings.jwt_private_key_path
+    # Support both absolute and relative paths
+    if not os.path.isabs(key_path):
+        # Get the project root directory (3 levels up from this file)
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+        key_path = os.path.join(project_root, key_path)
+    
+    if not os.path.exists(key_path):
+        raise FileNotFoundError(f"Private key not found at {key_path}")
+    
+    with open(key_path, "r") as f:
+        return f.read()
+
+def _load_public_key() -> str:
+    """Load RSA public key from file."""
+    key_path = settings.jwt_public_key_path
+    # Support both absolute and relative paths
+    if not os.path.isabs(key_path):
+        # Get the project root directory (3 levels up from this file)
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+        key_path = os.path.join(project_root, key_path)
+    
+    if not os.path.exists(key_path):
+        raise FileNotFoundError(f"Public key not found at {key_path}")
+    
+    with open(key_path, "r") as f:
+        return f.read()
+
+# Load keys at module initialization
+import logging
+
+logger = logging.getLogger(__name__)
+
+try:
+    if settings.jwt_algorithm == "RS256":
+        PRIVATE_KEY = _load_private_key()
+        PUBLIC_KEY = _load_public_key()
+        logger.info("RSA keys loaded successfully for RS256 algorithm")
+    else:
+        # For symmetric algorithms like HS256, use the same secret
+        PRIVATE_KEY = settings.jwt_secret
+        PUBLIC_KEY = settings.jwt_secret
+        logger.info(f"Using {settings.jwt_algorithm} algorithm with symmetric key")
+except Exception as e:
+    logger.error(f"Failed to load RSA keys: {e}")
+    # In production, this should fail fast rather than fallback
+    if settings.node_env == "production":
+        raise RuntimeError(f"Failed to load RSA keys in production: {e}")
+    logger.warning("Falling back to HS256 with jwt_secret (development only)")
+    PRIVATE_KEY = settings.jwt_secret
+    PUBLIC_KEY = settings.jwt_secret
 
 
 def hash_password(password: str) -> str:
@@ -65,7 +121,7 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
         "type": "access"
     })
     
-    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    encoded_jwt = jwt.encode(to_encode, PRIVATE_KEY, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
 
@@ -82,7 +138,7 @@ def create_refresh_token(data: Dict[str, Any]) -> str:
         "type": "refresh"
     })
     
-    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    encoded_jwt = jwt.encode(to_encode, PRIVATE_KEY, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
 
@@ -91,7 +147,7 @@ def decode_token(token: str) -> Dict[str, Any]:
     try:
         payload = jwt.decode(
             token,
-            settings.jwt_secret,
+            PUBLIC_KEY,
             algorithms=[settings.jwt_algorithm],
             issuer=settings.jwt_issuer,
             audience=settings.jwt_audience

@@ -5,6 +5,7 @@ JWT-based authentication service for the SaaS Management Application with tenant
 ## Features
 
 - ✅ JWT token generation with 1-hour expiry (configurable)
+- ✅ RS256 algorithm for JWT signing (asymmetric encryption)
 - ✅ Refresh token mechanism with CosmosDB storage and TTL
 - ✅ Password hashing using bcrypt via passlib
 - ✅ Tenant-aware authentication
@@ -88,9 +89,11 @@ NODE_ENV=development
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-JWT_ALGORITHM=HS256
+JWT_ALGORITHM=RS256
 JWT_EXPIRES_IN=3600
 JWT_REFRESH_EXPIRES_IN=604800
+JWT_PRIVATE_KEY_PATH=keys/private.pem
+JWT_PUBLIC_KEY_PATH=keys/public.pem
 
 # CosmosDB
 COSMOSDB_ENDPOINT=https://localhost:8081
@@ -279,12 +282,59 @@ src/auth-service/
 
 ## Security Features
 
-- **JWT-based Authentication**: Stateless authentication with access and refresh tokens
+- **JWT-based Authentication**: Stateless authentication with access and refresh tokens using RS256 algorithm
+- **RS256 Algorithm**: Asymmetric encryption using RSA public/private key pairs for enhanced security
 - **Account Lockout**: Configurable failed login attempts and lockout duration
 - **Password Hashing**: bcrypt via passlib with automatic salt generation
 - **Password Validation**: Configurable complexity requirements
 - **Token Revocation**: Support for single and multi-device logout
 - **Tenant Isolation**: Users can only access their tenant's resources
+
+## RSA Key Management
+
+The service uses RS256 algorithm which requires RSA key pairs:
+
+### Generate Keys
+
+```bash
+# Generate a new RSA key pair
+python3 -c "
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+
+# Generate private key
+private_key = rsa.generate_private_key(
+    public_exponent=65537,
+    key_size=2048,
+    backend=default_backend()
+)
+
+# Serialize and save keys
+private_pem = private_key.private_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PrivateFormat.PKCS8,
+    encryption_algorithm=serialization.NoEncryption()
+)
+
+public_pem = private_key.public_key().public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo
+)
+
+with open('keys/private.pem', 'wb') as f:
+    f.write(private_pem)
+with open('keys/public.pem', 'wb') as f:
+    f.write(public_pem)
+"
+```
+
+### Key Storage
+
+- **Development**: Keys are stored in the `keys/` directory
+- **Production**: Use Azure Key Vault or similar secure key management service
+- **Private Key**: Never commit to version control (excluded via .gitignore)
+- **Public Key**: Can be shared and used for token verification
 
 ## Interactive API Documentation
 
@@ -295,12 +345,13 @@ FastAPI automatically generates interactive API documentation:
 
 ## Production Considerations
 
-1. **JWT Algorithm**: Consider using RS256 for better security isolation
-2. **Key Management**: Use Azure Key Vault for JWT secrets
+1. **JWT Algorithm**: ✅ Using RS256 for better security isolation with asymmetric encryption
+2. **Key Management**: Use Azure Key Vault for RSA private keys in production
 3. **HTTPS**: Always use HTTPS in production
 4. **Monitoring**: Implement proper logging and monitoring
 5. **Rate Limiting**: Add rate limiting middleware (e.g., slowapi)
 6. **Security Headers**: Add security headers middleware
+7. **Key Rotation**: Implement periodic RSA key rotation for enhanced security
 
 ## Migration from Node.js/TypeScript
 

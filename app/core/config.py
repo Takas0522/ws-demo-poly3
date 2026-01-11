@@ -24,11 +24,13 @@ class Settings(BaseSettings):
 
     # JWT settings
     jwt_secret: str = "your-super-secret-jwt-key-change-this-in-production"
-    jwt_algorithm: str = "HS256"
+    jwt_algorithm: str = "RS256"
     jwt_expires_in: int = 3600  # 1 hour in seconds
     jwt_refresh_expires_in: int = 604800  # 7 days in seconds
     jwt_issuer: str = "saas-auth-service"
     jwt_audience: str = "saas-app"
+    jwt_private_key_path: str = "keys/private.pem"
+    jwt_public_key_path: str = "keys/public.pem"
 
     # CosmosDB settings
     cosmosdb_endpoint: str = "https://localhost:8081"

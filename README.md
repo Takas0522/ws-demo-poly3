@@ -4,6 +4,7 @@ JWT-based authentication service for the SaaS Management Application with tenant
 
 ## Features
 
+### Authentication
 - ✅ JWT token generation with 1-hour expiry (configurable)
 - ✅ RS256 algorithm for JWT signing (asymmetric encryption)
 - ✅ Refresh token mechanism with CosmosDB storage and TTL
@@ -12,6 +13,15 @@ JWT-based authentication service for the SaaS Management Application with tenant
 - ✅ Account lockout after failed login attempts
 - ✅ Token revocation support
 - ✅ Comprehensive error handling
+
+### Authorization
+- ✅ Permission validation middleware with dot notation
+- ✅ Route-level permission decorators
+- ✅ Wildcard permission support (`users.*`, `admin.*.view`, `*`)
+- ✅ Admin override functionality
+- ✅ Permission caching with TTL
+- ✅ Multiple permission patterns (ANY/ALL)
+- ✅ Detailed authorization error messages
 
 ## Tech Stack
 
@@ -258,12 +268,14 @@ src/auth-service/
 ├── app/
 │   ├── api/              # API route handlers
 │   │   ├── auth.py       # Authentication endpoints
-│   │   └── root.py       # Root and health endpoints
+│   │   ├── root.py       # Root and health endpoints
+│   │   └── examples_authorization.py  # Authorization examples
 │   ├── core/             # Core functionality
 │   │   ├── config.py     # Configuration management
 │   │   └── security.py   # JWT and password utilities
 │   ├── middleware/       # FastAPI middleware
-│   │   └── auth.py       # Authentication dependencies
+│   │   ├── auth.py       # Authentication dependencies
+│   │   └── authorization.py  # Authorization and permission checking
 │   ├── models/           # Database models (future)
 │   ├── schemas/          # Pydantic schemas
 │   │   └── auth.py       # Request/response models
@@ -273,15 +285,20 @@ src/auth-service/
 │   ├── utils/            # Utility functions
 │   └── main.py           # Application entry point
 ├── tests/                # Test files
-│   └── test_security.py  # Security tests
+│   ├── test_security.py  # Security tests
+│   ├── test_jwt.py       # JWT token tests
+│   ├── test_authorization.py  # Authorization tests
+│   └── test_authorization_integration.py  # Integration tests
 ├── .gitignore
 ├── pyproject.toml        # Poetry configuration
 ├── requirements.txt      # Pip requirements
+├── AUTHORIZATION.md      # Authorization middleware documentation
 └── README.md
 ```
 
 ## Security Features
 
+### Authentication
 - **JWT-based Authentication**: Stateless authentication with access and refresh tokens using RS256 algorithm
 - **RS256 Algorithm**: Asymmetric encryption using RSA public/private key pairs for enhanced security
 - **Account Lockout**: Configurable failed login attempts and lockout duration
@@ -289,6 +306,16 @@ src/auth-service/
 - **Password Validation**: Configurable complexity requirements
 - **Token Revocation**: Support for single and multi-device logout
 - **Tenant Isolation**: Users can only access their tenant's resources
+
+### Authorization
+- **Permission System**: Dot notation permission system (e.g., `users.read`, `documents.write`)
+- **Wildcard Support**: Flexible permission patterns (`users.*`, `admin.*.view`, `*`)
+- **Route Protection**: Decorators for easy route-level permission enforcement
+- **Admin Override**: Configurable admin role bypass for permission checks
+- **Permission Caching**: In-memory cache with TTL for improved performance
+- **Detailed Errors**: Clear HTTP 403 responses with missing permission details
+
+For detailed authorization documentation, see [AUTHORIZATION.md](AUTHORIZATION.md)
 
 ## RSA Key Management
 

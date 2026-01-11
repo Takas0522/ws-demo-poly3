@@ -128,8 +128,8 @@ def require_permission(
         Decorator function
     
     Example:
-        @router.get("/users")
         @require_permission("users.read")
+        @router.get("/users")
         async def list_users(current_user: dict = Depends(get_current_user)):
             ...
     """
@@ -180,8 +180,8 @@ def require_any_permission(
         Decorator function
     
     Example:
-        @router.get("/documents")
         @require_any_permission(["documents.read", "documents.admin"])
+        @router.get("/documents")
         async def list_documents(current_user: dict = Depends(get_current_user)):
             ...
     """
@@ -232,8 +232,8 @@ def require_all_permissions(
         Decorator function
     
     Example:
-        @router.delete("/sensitive-data")
         @require_all_permissions(["data.delete", "data.admin"])
+        @router.delete("/sensitive-data")
         async def delete_sensitive_data(current_user: dict = Depends(get_current_user)):
             ...
     """
@@ -282,6 +282,9 @@ async def check_permission(
     """
     Dependency function to check permission in route handler.
     
+    Note: Using decorators (@require_permission) is recommended over this function
+    as they provide cleaner syntax and better readability.
+    
     Args:
         permission: Required permission in dot notation
         current_user: Current authenticated user
@@ -294,10 +297,12 @@ async def check_permission(
         HTTPException: If user doesn't have permission
     
     Example:
+        from functools import partial
+        
         @router.get("/users")
         async def list_users(
             current_user: dict = Depends(get_current_user),
-            _: bool = Depends(lambda u=Depends(get_current_user): check_permission("users.read", u))
+            _: bool = Depends(partial(check_permission, "users.read"))
         ):
             ...
     """

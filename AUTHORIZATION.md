@@ -114,6 +114,7 @@ Requires a specific permission for route access.
 **Example:**
 ```python
 @require_permission("users.read")
+@router.get("/users")
 async def get_user(current_user: dict = Depends(get_current_user)):
     pass
 ```
@@ -129,6 +130,7 @@ Requires at least one of the specified permissions.
 **Example:**
 ```python
 @require_any_permission(["docs.read", "docs.admin"])
+@router.get("/documents")
 async def view_docs(current_user: dict = Depends(get_current_user)):
     pass
 ```
@@ -144,6 +146,7 @@ Requires all specified permissions.
 **Example:**
 ```python
 @require_all_permissions(["data.delete", "data.admin"])
+@router.delete("/sensitive-data")
 async def delete_data(current_user: dict = Depends(get_current_user)):
     pass
 ```

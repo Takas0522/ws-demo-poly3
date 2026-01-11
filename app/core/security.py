@@ -17,7 +17,9 @@ def _load_private_key() -> str:
     key_path = settings.jwt_private_key_path
     # Support both absolute and relative paths
     if not os.path.isabs(key_path):
-        key_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), key_path)
+        # Get the project root directory (3 levels up from this file)
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+        key_path = os.path.join(project_root, key_path)
     
     if not os.path.exists(key_path):
         raise FileNotFoundError(f"Private key not found at {key_path}")
@@ -30,7 +32,9 @@ def _load_public_key() -> str:
     key_path = settings.jwt_public_key_path
     # Support both absolute and relative paths
     if not os.path.isabs(key_path):
-        key_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), key_path)
+        # Get the project root directory (3 levels up from this file)
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+        key_path = os.path.join(project_root, key_path)
     
     if not os.path.exists(key_path):
         raise FileNotFoundError(f"Public key not found at {key_path}")
@@ -39,16 +43,26 @@ def _load_public_key() -> str:
         return f.read()
 
 # Load keys at module initialization
+import logging
+
+logger = logging.getLogger(__name__)
+
 try:
     if settings.jwt_algorithm == "RS256":
         PRIVATE_KEY = _load_private_key()
         PUBLIC_KEY = _load_public_key()
+        logger.info("RSA keys loaded successfully for RS256 algorithm")
     else:
+        # For symmetric algorithms like HS256, use the same secret
         PRIVATE_KEY = settings.jwt_secret
         PUBLIC_KEY = settings.jwt_secret
+        logger.info(f"Using {settings.jwt_algorithm} algorithm with symmetric key")
 except Exception as e:
-    print(f"Warning: Failed to load RSA keys: {e}")
-    print("Falling back to HS256 with jwt_secret")
+    logger.error(f"Failed to load RSA keys: {e}")
+    # In production, this should fail fast rather than fallback
+    if settings.node_env == "production":
+        raise RuntimeError(f"Failed to load RSA keys in production: {e}")
+    logger.warning("Falling back to HS256 with jwt_secret (development only)")
     PRIVATE_KEY = settings.jwt_secret
     PUBLIC_KEY = settings.jwt_secret
 

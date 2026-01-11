@@ -48,3 +48,7 @@ htmlcov/
 # Logs
 *.log
 
+# Private keys (security)
+keys/private.pem
+keys/*.key
+

@@ -16,8 +16,8 @@ router = APIRouter(prefix="/api", tags=["examples"])
 
 
 # Example 1: Single permission requirement
-@router.get("/users")
 @require_permission("users.read")
+@router.get("/users")
 async def list_users(current_user: dict = Depends(get_current_user)):
     """
     List all users. Requires 'users.read' permission.
@@ -27,8 +27,8 @@ async def list_users(current_user: dict = Depends(get_current_user)):
 
 
 # Example 2: Single permission without admin override
-@router.delete("/users/{user_id}/permanent")
 @require_permission("users.permanent_delete", allow_admin_override=False)
+@router.delete("/users/{user_id}/permanent")
 async def permanently_delete_user(
     user_id: str, current_user: dict = Depends(get_current_user)
 ):
@@ -40,8 +40,8 @@ async def permanently_delete_user(
 
 
 # Example 3: Any of multiple permissions
-@router.get("/documents")
 @require_any_permission(["documents.read", "documents.admin", "documents.viewer"])
+@router.get("/documents")
 async def list_documents(current_user: dict = Depends(get_current_user)):
     """
     List documents. User needs at least ONE of:
@@ -53,8 +53,8 @@ async def list_documents(current_user: dict = Depends(get_current_user)):
 
 
 # Example 4: All of multiple permissions
-@router.delete("/sensitive-data")
 @require_all_permissions(["data.delete", "data.sensitive.access"])
+@router.delete("/sensitive-data")
 async def delete_sensitive_data(current_user: dict = Depends(get_current_user)):
     """
     Delete sensitive data. User needs ALL of:
@@ -67,8 +67,8 @@ async def delete_sensitive_data(current_user: dict = Depends(get_current_user)):
 
 
 # Example 5: Wildcard permissions
-@router.post("/users")
 @require_permission("users.write")
+@router.post("/users")
 async def create_user(current_user: dict = Depends(get_current_user)):
     """
     Create a new user. Requires 'users.write' permission.
@@ -79,8 +79,8 @@ async def create_user(current_user: dict = Depends(get_current_user)):
 
 
 # Example 6: Nested wildcard permissions
-@router.get("/admin/settings/view")
 @require_permission("admin.settings.view")
+@router.get("/admin/settings/view")
 async def view_admin_settings(current_user: dict = Depends(get_current_user)):
     """
     View admin settings. Requires 'admin.settings.view' permission.

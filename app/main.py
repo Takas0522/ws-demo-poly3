@@ -15,7 +15,11 @@ async def lifespan(app: FastAPI):
     # Startup
     print("Initializing CosmosDB connection...")
     await cosmos_db.initialize()
-    print("CosmosDB initialized successfully")
+    if cosmos_db._initialized:
+        print("✅ CosmosDB initialized successfully")
+    else:
+        print("❌ Warning: CosmosDB connection failed")
+        print("   Please ensure CosmosDB Emulator is running")
     yield
     # Shutdown
     print("Shutting down...")

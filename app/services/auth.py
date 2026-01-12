@@ -2,7 +2,7 @@
 Authentication service business logic.
 """
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from uuid import uuid4
 from fastapi import HTTPException, status
 from app.core.config import settings
@@ -13,7 +13,7 @@ from app.core.security import (
     create_refresh_token,
     decode_token,
 )
-from app.schemas import LoginRequest, LoginResponse, TokenPair, UserProfile
+from app.schemas import LoginRequest, LoginResponse, TokenPair, UserProfile, TenantInfo
 from app.services.cosmosdb import cosmos_db
 
 
@@ -57,11 +57,30 @@ class AuthService:
                 detail=f"Account is {user.get('status')}",
             )
         
+        # Check userType - reject external users
+        user_type = user.get("userType", "internal")
+        if user_type == "external":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="管理会社外ユーザーはシステムにログインできません",
+            )
+        
         # Reset failed login attempts
         await AuthService._reset_failed_login_attempts(user["id"], user["tenantId"])
         
-        # Generate tokens
-        tokens = await AuthService._generate_token_pair(user)
+        # Get user's tenant memberships
+        tenant_users = await cosmos_db.get_user_tenants(user["id"])
+        tenant_list = []
+        for tu in tenant_users:
+            tenant_info = TenantInfo(
+                id=tu.get("tenantId", ""),
+                name=tu.get("tenantName", ""),
+                roles=tu.get("roles", [])
+            )
+            tenant_list.append(tenant_info)
+        
+        # Generate tokens with tenant information
+        tokens = await AuthService._generate_token_pair(user, tenant_list)
         
         # Update last login
         await cosmos_db.update_user_security(
@@ -80,7 +99,7 @@ class AuthService:
             status=user.get("status", "active")
         )
         
-        return LoginResponse(tokens=tokens, user=user_profile)
+        return LoginResponse(tokens=tokens, user=user_profile, tenants=tenant_list)
     
     @staticmethod
     async def refresh_token(refresh_token: str) -> TokenPair:
@@ -126,7 +145,19 @@ class AuthService:
         
         # Revoke old token and generate new ones
         await cosmos_db.revoke_refresh_token(token_id, user_id)
-        tokens = await AuthService._generate_token_pair(user)
+        
+        # Get user's tenant memberships for refresh
+        tenant_users = await cosmos_db.get_user_tenants(user_id)
+        tenant_list = []
+        for tu in tenant_users:
+            tenant_info = TenantInfo(
+                id=tu.get("tenantId", ""),
+                name=tu.get("tenantName", ""),
+                roles=tu.get("roles", [])
+            )
+            tenant_list.append(tenant_info)
+        
+        tokens = await AuthService._generate_token_pair(user, tenant_list)
         
         return tokens
     
@@ -145,14 +176,53 @@ class AuthService:
                 pass  # Invalid token, ignore
     
     @staticmethod
-    async def _generate_token_pair(user: Dict[str, Any]) -> TokenPair:
+    async def switch_tenant(user_id: str, tenant_id: str, current_token_data: Dict[str, Any]) -> TokenPair:
+        """Switch user's active tenant."""
+        # Verify user has access to the tenant
+        tenant_user = await cosmos_db.get_tenant_user(user_id, tenant_id)
+        if not tenant_user:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="指定されたテナントに所属していません",
+            )
+        
+        # Create new token with updated selectedTenantId
+        new_token_data = current_token_data.copy()
+        new_token_data["selectedTenantId"] = tenant_id
+        
+        # Create new access token
+        access_token = create_access_token({
+            k: v for k, v in new_token_data.items() 
+            if k not in ["exp", "iat", "iss", "aud", "type"]
+        })
+        
+        # Return token pair (keep same refresh token structure)
+        return TokenPair(
+            access_token=access_token,
+            refresh_token="",  # Client should use existing refresh token
+            expires_in=settings.jwt_expires_in,
+            token_type="Bearer"
+        )
+    
+    @staticmethod
+    async def _generate_token_pair(user: Dict[str, Any], tenants: List[TenantInfo] = None) -> TokenPair:
         """Generate access and refresh token pair."""
-        # Create access token
+        if tenants is None:
+            tenants = []
+        
+        # Get primary tenant ID (default to user's tenantId if not specified)
+        primary_tenant_id = user.get("primaryTenantId", user.get("tenantId", ""))
+        
+        # Create access token with tenant information
         access_token_data = {
             "sub": user["id"],
             "email": user["email"],
             "displayName": user.get("displayName", ""),
             "tenantId": user["tenantId"],
+            "userType": user.get("userType", "internal"),
+            "primaryTenantId": primary_tenant_id,
+            "selectedTenantId": primary_tenant_id,  # Initial value
+            "tenants": [{"id": t.id, "name": t.name, "roles": t.roles} for t in tenants],
             "roles": user.get("roles", []),
             "permissions": user.get("permissions", []),
         }

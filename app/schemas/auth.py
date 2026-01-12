@@ -21,6 +21,13 @@ class TokenPair(BaseModel):
     token_type: str = "Bearer"
 
 
+class TenantInfo(BaseModel):
+    """Tenant information schema."""
+    id: str
+    name: str
+    roles: List[str]
+
+
 class UserProfile(BaseModel):
     """User profile schema."""
     id: str
@@ -35,6 +42,7 @@ class LoginResponse(BaseModel):
     """Login response schema."""
     tokens: TokenPair
     user: UserProfile
+    tenants: List[TenantInfo] = []
 
 
 class RefreshTokenRequest(BaseModel):
@@ -67,6 +75,13 @@ class CurrentUserResponse(BaseModel):
     tenant_id: str
     roles: List[str]
     permissions: List[str]
+    tenants: List[TenantInfo] = []
+    selected_tenant_id: Optional[str] = None
+
+
+class SwitchTenantRequest(BaseModel):
+    """Tenant switch request schema."""
+    tenant_id: str
 
 
 class HealthCheckResponse(BaseModel):

@@ -11,6 +11,8 @@ from app.schemas import (
     LogoutRequest,
     TokenVerifyResponse,
     CurrentUserResponse,
+    SwitchTenantRequest,
+    TenantInfo,
 )
 from app.services import auth_service
 from app.middleware import get_current_user
@@ -78,8 +80,19 @@ async def get_current_user_info(
     """
     Get current user information from token.
     
-    Returns user details extracted from the JWT token.
+    Returns user details extracted from the JWT token, including tenants list.
     """
+    # Extract tenants from token
+    tenants_data = current_user.get("tenants", [])
+    tenants = [
+        TenantInfo(
+            id=t.get("id", ""),
+            name=t.get("name", ""),
+            roles=t.get("roles", [])
+        )
+        for t in tenants_data
+    ]
+    
     return CurrentUserResponse(
         id=current_user["sub"],
         email=current_user["email"],
@@ -87,4 +100,30 @@ async def get_current_user_info(
         tenant_id=current_user["tenantId"],
         roles=current_user.get("roles", []),
         permissions=current_user.get("permissions", []),
+        tenants=tenants,
+        selected_tenant_id=current_user.get("selectedTenantId"),
     )
+
+
+@router.post("/switch-tenant")
+async def switch_tenant(
+    request: SwitchTenantRequest,
+    current_user: dict = Depends(get_current_user)
+) -> dict:
+    """
+    Switch user's active tenant.
+    
+    - **tenant_id**: The ID of the tenant to switch to
+    
+    Returns a new access token with the updated selectedTenantId.
+    """
+    tokens = await auth_service.switch_tenant(
+        current_user["sub"],
+        request.tenant_id,
+        current_user
+    )
+    return {
+        "access_token": tokens.access_token,
+        "expires_in": tokens.expires_in,
+        "token_type": tokens.token_type
+    }

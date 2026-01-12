@@ -82,6 +82,10 @@ class CosmosDBService:
         """Get audit logs container."""
         return self.get_container("audit-logs")
 
+    def get_tenant_users_container(self) -> ContainerProxy:
+        """Get tenant-users container."""
+        return self.get_container("tenant-users")
+
     async def find_user_by_email(
         self, email: str, tenant_id: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
@@ -166,6 +170,29 @@ class CosmosDBService:
                 container.delete_item(item=item["id"], partition_key=user_id)
             except exceptions.CosmosResourceNotFoundError:
                 pass
+
+    async def get_user_tenants(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get all tenants that a user belongs to."""
+        container = self.get_tenant_users_container()
+        query = "SELECT * FROM c WHERE c.userId = @userId"
+        parameters = [{"name": "@userId", "value": user_id}]
+
+        items = list(container.query_items(
+            query=query, parameters=parameters, enable_cross_partition_query=True))
+        return items
+
+    async def get_tenant_user(self, user_id: str, tenant_id: str) -> Optional[Dict[str, Any]]:
+        """Get a specific tenant-user relationship."""
+        container = self.get_tenant_users_container()
+        query = "SELECT * FROM c WHERE c.userId = @userId AND c.tenantId = @tenantId"
+        parameters = [
+            {"name": "@userId", "value": user_id},
+            {"name": "@tenantId", "value": tenant_id}
+        ]
+
+        items = list(container.query_items(
+            query=query, parameters=parameters, enable_cross_partition_query=True))
+        return items[0] if items else None
 
 
 # Global instance

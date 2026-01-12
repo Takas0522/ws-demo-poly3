@@ -7,8 +7,10 @@ from app.schemas.auth import (
     LogoutRequest,
     TokenPair,
     UserProfile,
+    TenantInfo,
     TokenVerifyResponse,
     CurrentUserResponse,
+    SwitchTenantRequest,
     HealthCheckResponse,
     ErrorResponse,
 )
@@ -21,8 +23,10 @@ __all__ = [
     "LogoutRequest",
     "TokenPair",
     "UserProfile",
+    "TenantInfo",
     "TokenVerifyResponse",
     "CurrentUserResponse",
+    "SwitchTenantRequest",
     "HealthCheckResponse",
     "ErrorResponse",
 ]

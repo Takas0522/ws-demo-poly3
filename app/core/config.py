@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     cosmosdb_key: str = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
     cosmosdb_database: str = "saas-management-dev"
 
+    # Redis settings (for permission caching)
+    redis_host: str = "redis"
+    redis_port: int = 6379
+    redis_password: str = ""
+    redis_db: int = 0
+
     def __init__(self, **kwargs):
         """Initialize settings and ensure CosmosDB key is correctly loaded."""
         super().__init__(**kwargs)

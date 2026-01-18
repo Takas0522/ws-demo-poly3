@@ -51,7 +51,7 @@ class CosmosDBService:
         # 既存のコンテナを確認するだけ
         print("  Checking existing containers...")
         try:
-            containers = ["users", "refresh-tokens", "audit-logs"]
+            containers = ["Users", "refresh-tokens", "audit-logs"]
             for container_name in containers:
                 try:
                     self.database.get_container_client(container_name).read()
@@ -72,7 +72,7 @@ class CosmosDBService:
 
     def get_users_container(self) -> ContainerProxy:
         """Get users container."""
-        return self.get_container("users")
+        return self.get_container("Users")
 
     def get_refresh_tokens_container(self) -> ContainerProxy:
         """Get refresh tokens container."""
@@ -84,7 +84,7 @@ class CosmosDBService:
 
     def get_tenant_users_container(self) -> ContainerProxy:
         """Get tenant-users container."""
-        return self.get_container("tenant-users")
+        return self.get_container("TenantUsers")
 
     async def find_user_by_email(
         self, email: str, tenant_id: Optional[str] = None

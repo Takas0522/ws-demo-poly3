@@ -68,16 +68,17 @@ class AuthService:
         # Reset failed login attempts
         await AuthService._reset_failed_login_attempts(user["id"], user["tenantId"])
         
-        # Get user's tenant memberships
-        tenant_users = await cosmos_db.get_user_tenants(user["id"])
+        # Get user's tenant memberships from user document
         tenant_list = []
-        for tu in tenant_users:
-            tenant_info = TenantInfo(
-                id=tu.get("tenantId", ""),
-                name=tu.get("tenantName", ""),
-                roles=tu.get("roles", [])
-            )
-            tenant_list.append(tenant_info)
+        user_tenants = user.get("tenants", [])
+        if user_tenants:
+            for tenant in user_tenants:
+                tenant_info = TenantInfo(
+                    id=tenant.get("id", ""),
+                    name=tenant.get("name", ""),
+                    roles=tenant.get("roles", [])
+                )
+                tenant_list.append(tenant_info)
         
         # Generate tokens with tenant information
         tokens = await AuthService._generate_token_pair(user, tenant_list)
@@ -146,16 +147,17 @@ class AuthService:
         # Revoke old token and generate new ones
         await cosmos_db.revoke_refresh_token(token_id, user_id)
         
-        # Get user's tenant memberships for refresh
-        tenant_users = await cosmos_db.get_user_tenants(user_id)
+        # Get user's tenant memberships from user document
         tenant_list = []
-        for tu in tenant_users:
-            tenant_info = TenantInfo(
-                id=tu.get("tenantId", ""),
-                name=tu.get("tenantName", ""),
-                roles=tu.get("roles", [])
-            )
-            tenant_list.append(tenant_info)
+        user_tenants = user.get("tenants", [])
+        if user_tenants:
+            for tenant in user_tenants:
+                tenant_info = TenantInfo(
+                    id=tenant.get("id", ""),
+                    name=tenant.get("name", ""),
+                    roles=tenant.get("roles", [])
+                )
+                tenant_list.append(tenant_info)
         
         tokens = await AuthService._generate_token_pair(user, tenant_list)
         

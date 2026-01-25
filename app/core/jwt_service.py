@@ -31,6 +31,17 @@ class JWTService:
         except Exception as e:
             raise RuntimeError(f"Failed to load JWT keys: {str(e)}")
     
+    def get_public_key(self) -> str:
+        """
+        Get the RSA public key for JWT verification.
+        
+        Returns:
+            str: Public key in PEM format
+        """
+        if not self._public_key:
+            raise RuntimeError("Public key not loaded")
+        return self._public_key
+    
     def generate_access_token(
         self,
         user_id: str,

@@ -201,6 +201,19 @@ async def login(request: Request, login_request: LoginRequest):
     return token_data
 
 
+@router.get("/public-key", summary="Get Public Key", description="Retrieve the RSA public key for JWT verification")
+async def get_public_key():
+    """
+    Get RSA public key for JWT verification.
+    
+    Returns the public key that should be used by other services to verify JWT tokens.
+    """
+    from app.core.jwt_service import jwt_service
+    
+    public_key = jwt_service.get_public_key()
+    return {"publicKey": public_key}
+
+
 @router.post("/verify", response_model=VerifyResponse, responses={
     401: {"model": ErrorResponse, "description": "Invalid or expired token"},
     423: {"model": ErrorResponse, "description": "Account locked"}

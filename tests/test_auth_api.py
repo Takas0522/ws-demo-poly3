@@ -15,7 +15,7 @@ class TestAuthAPI:
     
     @patch('app.services.authentication_service.user_repository')
     @patch('app.services.authentication_service.login_attempt_repository')
-    async def test_login_success(self, mock_login_repo, mock_user_repo):
+    def test_login_success(self, mock_login_repo, mock_user_repo):
         """Test successful login."""
         # Mock user with privileged tenant
         mock_user = User(
@@ -83,7 +83,7 @@ class TestAuthAPI:
     
     @patch('app.services.authentication_service.user_repository')
     @patch('app.services.authentication_service.login_attempt_repository')
-    async def test_login_non_privileged_tenant(self, mock_login_repo, mock_user_repo):
+    def test_login_non_privileged_tenant(self, mock_login_repo, mock_user_repo):
         """Test login with non-privileged tenant user."""
         # Mock user without privileged tenant
         mock_user = User(
@@ -114,7 +114,7 @@ class TestAuthAPI:
     
     @patch('app.services.authentication_service.user_repository')
     @patch('app.services.authentication_service.login_attempt_repository')
-    async def test_login_locked_account(self, mock_login_repo, mock_user_repo):
+    def test_login_locked_account(self, mock_login_repo, mock_user_repo):
         """Test login with locked account."""
         from datetime import timedelta
         

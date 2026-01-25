@@ -101,7 +101,7 @@ class AuthenticationService:
         )
         
         # Generate tokens
-        token_data = self._generate_tokens(user)
+        token_data = await self._generate_tokens(user)
         
         return token_data, None
     
@@ -120,7 +120,7 @@ class AuthenticationService:
         
         return settings.privileged_tenant_id in user.tenantIds
     
-    def _generate_tokens(self, user: User) -> Dict:
+    async def _generate_tokens(self, user: User) -> Dict:
         """
         Generate JWT access and refresh tokens.
         
@@ -165,20 +165,20 @@ class AuthenticationService:
             token_id=token_id
         )
         
-        # Store refresh token in database (async, but we won't wait for it)
-        # In a real system, you might want to wait or handle failures
-        import asyncio
+        # Store refresh token in database
+        # Note: We store the token_id only, not the JWT itself
+        # JWT verification is done cryptographically, no need to hash
         try:
-            # Create task to store refresh token
-            asyncio.create_task(self._store_refresh_token(
+            # Store refresh token and wait for completion
+            await self._store_refresh_token(
                 token_id=token_id,
                 user_id=user.id,
-                token_hash=password_service.hash_password(refresh_token),
+                token_hash="",  # Not storing the actual token
                 expires_at=expires_at
-            ))
-        except Exception:
+            )
+        except Exception as e:
             # Log error but don't fail login
-            pass
+            logger.error(f"Failed to store refresh token: {str(e)}")
         
         return {
             "accessToken": access_token,
@@ -370,7 +370,7 @@ class AuthenticationService:
             return None, "AUTH007"  # Account locked
         
         # Generate new tokens
-        token_data = self._generate_tokens(user)
+        token_data = await self._generate_tokens(user)
         
         return token_data, None
 

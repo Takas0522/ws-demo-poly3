@@ -13,14 +13,14 @@ class CosmosDBClient:
 
     def connect(self) -> None:
         """Initialize connection to Cosmos DB."""
-        if not settings.cosmos_endpoint or not settings.cosmos_key:
+        if not settings.cosmosdb_endpoint or not settings.cosmosdb_key:
             # Skip connection if credentials are not configured
             return
 
         try:
-            self._client = CosmosClient(settings.cosmos_endpoint, settings.cosmos_key)
-            self._database = self._client.get_database_client(settings.cosmos_database_name)
-            self._container = self._database.get_container_client(settings.cosmos_container_name)
+            self._client = CosmosClient(settings.cosmosdb_endpoint, settings.cosmosdb_key)
+            self._database = self._client.get_database_client(settings.cosmosdb_database)
+            self._container = self._database.get_container_client(settings.cosmosdb_container)
         except Exception as e:
             # Log the error but don't fail startup - allow the service to run without DB
             print(f"Warning: Failed to connect to Cosmos DB: {e}")
@@ -31,7 +31,8 @@ class CosmosDBClient:
     def disconnect(self) -> None:
         """Close connection to Cosmos DB."""
         if self._client:
-            self._client.close()
+            # CosmosClient does not have a close() method in recent versions
+            # Just clear the references
             self._client = None
             self._database = None
             self._container = None

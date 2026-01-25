@@ -19,6 +19,7 @@ This service provides authentication and authorization functionality using FastA
 
 - Python 3.11+
 - Azure Cosmos DB account (optional for local development)
+- Docker Desktop (v20.10以上) - Cosmos DB Emulatorを使用する場合
 
 ### Installation
 
@@ -39,10 +40,10 @@ cp .env.example .env
 ```
 
 Edit `.env` with your Cosmos DB credentials:
-- `COSMOS_ENDPOINT`: Your Cosmos DB endpoint URL
-- `COSMOS_KEY`: Your Cosmos DB access key
-- `COSMOS_DATABASE_NAME`: Database name
-- `COSMOS_CONTAINER_NAME`: Container name
+- `COSMOSDB_ENDPOINT`: Your Cosmos DB endpoint URL
+- `COSMOSDB_KEY`: Your Cosmos DB access key
+- `COSMOSDB_DATABASE`: Database name
+- `COSMOSDB_CONTAINER`: Container name
 
 ## Running the Service
 
@@ -50,16 +51,16 @@ Edit `.env` with your Cosmos DB credentials:
 
 ```bash
 # Using uvicorn directly
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 
 # Or using poetry
-poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
 The service will be available at:
-- API: http://localhost:8000
-- API Documentation: http://localhost:8000/docs
-- Alternative API Documentation: http://localhost:8000/redoc
+- API: http://localhost:8001
+- API Documentation: http://localhost:8001/docs
+- Alternative API Documentation: http://localhost:8001/redoc
 
 ## API Endpoints
 

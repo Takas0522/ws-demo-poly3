@@ -12,10 +12,10 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # Cosmos DB
-    cosmos_endpoint: str = ""
-    cosmos_key: str = ""
-    cosmos_database_name: str = "auth_db"
-    cosmos_container_name: str = "users"
+    cosmosdb_endpoint: str = ""
+    cosmosdb_key: str = ""
+    cosmosdb_database: str = "auth_db"
+    cosmosdb_container: str = "users"
 
 
 settings = Settings()

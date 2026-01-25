@@ -89,10 +89,12 @@ class TestUserRoleModel:
     def test_user_role_creation(self):
         """Test creating a UserRole instance."""
         user_role = UserRole(
+            id="usr_123_role_admin",
             userId="usr_123",
             roleId="role_admin",
             serviceId="srv_auth",
         )
+        assert user_role.id == "usr_123_role_admin"
         assert user_role.userId == "usr_123"
         assert user_role.roleId == "role_admin"
         assert user_role.serviceId == "srv_auth"
@@ -104,8 +106,10 @@ class TestUserTenantModel:
     def test_user_tenant_creation(self):
         """Test creating a UserTenant instance."""
         user_tenant = UserTenant(
+            id="usr_123_tenant_priv",
             userId="usr_123",
             tenantId="tnt_privileged",
         )
+        assert user_tenant.id == "usr_123_tenant_priv"
         assert user_tenant.userId == "usr_123"
         assert user_tenant.tenantId == "tnt_privileged"

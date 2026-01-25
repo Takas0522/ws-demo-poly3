@@ -18,6 +18,8 @@ python scripts/setup_containers.py
 - Creates the database if it doesn't exist
 - Creates the `users` container with partition key `/id`
 - Creates the `login-attempts` container with partition key `/loginId`
+- Creates the `user-roles` container with partition key `/userId`
+- Creates the `user-tenants` container with partition key `/userId`
 
 **Requirements:**
 - Environment variables must be set (in `.env` file):
@@ -40,6 +42,8 @@ python scripts/seed_data.py
   - Login ID: `admin@saas-platform.local`
   - Default Password: `Admin@123`
   - ⚠️ **Important:** Change the default password after first login!
+- Assigns the global admin role to the user (`role_global_admin` for service `srv_all`)
+- Associates the user with the privileged tenant (`tnt_privileged`)
 
 **Requirements:**
 - Containers must already exist (run `setup_containers.py` first)
@@ -116,9 +120,9 @@ For local development, you can use the Azure Cosmos DB Emulator:
 
 ⚠️ **Important Security Considerations:**
 
-1. **Password Hashing:** The seed_data.py script uses SHA-256 for demonstration purposes only. In production:
-   - Use bcrypt, argon2, or scrypt for password hashing
-   - These libraries provide salting and slow computation
-   - Never use fast hash functions like SHA-256 for passwords
+1. **Password Hashing:** The seed_data.py script uses bcrypt for secure password hashing:
+   - Provides salting (protection against rainbow tables)
+   - Uses slow computation (resistance to brute-force attacks)
+   - Configurable work factors
 
 2. **Default Credentials:** Always change the default admin password immediately after setup

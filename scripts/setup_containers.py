@@ -77,6 +77,8 @@ class CosmosDBSetup:
             # Create containers
             self.create_container_if_not_exists("users", "/id")
             self.create_container_if_not_exists("login-attempts", "/loginId")
+            self.create_container_if_not_exists("user-roles", "/userId")
+            self.create_container_if_not_exists("user-tenants", "/userId")
 
             print("=" * 60)
             print("✓ Setup completed successfully!")

@@ -18,6 +18,7 @@ python scripts/setup_containers.py
 - Creates the database if it doesn't exist
 - Creates the `users` container with partition key `/id`
 - Creates the `login-attempts` container with partition key `/loginId`
+- Creates the `role-configs` container with partition key `/serviceId`
 
 **Requirements:**
 - Environment variables must be set (in `.env` file):
@@ -116,9 +117,9 @@ For local development, you can use the Azure Cosmos DB Emulator:
 
 ⚠️ **Important Security Considerations:**
 
-1. **Password Hashing:** The seed_data.py script uses SHA-256 for demonstration purposes only. In production:
-   - Use bcrypt, argon2, or scrypt for password hashing
-   - These libraries provide salting and slow computation
-   - Never use fast hash functions like SHA-256 for passwords
+1. **Password Hashing:** The seed_data.py script uses bcrypt with cost factor 12 for secure password hashing as specified in the documentation:
+   - Bcrypt provides salting (protection against rainbow tables)
+   - Slow computation (resistance to brute-force attacks)
+   - Configurable work factors
 
 2. **Default Credentials:** Always change the default admin password immediately after setup

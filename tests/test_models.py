@@ -58,29 +58,40 @@ class TestLoginAttemptModel:
     def test_login_attempt_creation(self):
         """Test creating a LoginAttempt instance."""
         attempt = LoginAttempt(
-            id="att_123",
+            id="la-001",
+            userId="user-001",
             loginId="test@example.com",
             isSuccess=True,
             ipAddress="192.168.1.100",
-            userAgent="Mozilla/5.0",
         )
-        assert attempt.id == "att_123"
+        assert attempt.id == "la-001"
+        assert attempt.userId == "user-001"
         assert attempt.loginId == "test@example.com"
         assert attempt.isSuccess is True
         assert attempt.ipAddress == "192.168.1.100"
-        assert attempt.userAgent == "Mozilla/5.0"
         assert isinstance(attempt.attemptedAt, datetime)
 
     def test_failed_login_attempt(self):
         """Test creating a failed login attempt."""
         attempt = LoginAttempt(
-            id="att_456",
+            id="la-002",
             loginId="failed@example.com",
             isSuccess=False,
+            ipAddress="192.168.1.101",
         )
         assert attempt.isSuccess is False
-        assert attempt.ipAddress is None
-        assert attempt.userAgent is None
+        assert attempt.userId is None
+
+    def test_login_attempt_without_user(self):
+        """Test creating a login attempt when user is not identified."""
+        attempt = LoginAttempt(
+            id="la-003",
+            loginId="unknown@example.com",
+            isSuccess=False,
+            ipAddress="192.168.1.102",
+        )
+        assert attempt.userId is None
+        assert attempt.loginId == "unknown@example.com"
 
 
 class TestUserRoleModel:
@@ -89,13 +100,16 @@ class TestUserRoleModel:
     def test_user_role_creation(self):
         """Test creating a UserRole instance."""
         user_role = UserRole(
-            userId="usr_123",
-            roleId="role_admin",
-            serviceId="srv_auth",
+            id="ur-001",
+            userId="user-001",
+            roleId="role-auth-admin",
+            serviceId="auth-service",
         )
-        assert user_role.userId == "usr_123"
-        assert user_role.roleId == "role_admin"
-        assert user_role.serviceId == "srv_auth"
+        assert user_role.id == "ur-001"
+        assert user_role.userId == "user-001"
+        assert user_role.roleId == "role-auth-admin"
+        assert user_role.serviceId == "auth-service"
+        assert isinstance(user_role.assignedAt, datetime)
 
 
 class TestUserTenantModel:
@@ -104,8 +118,11 @@ class TestUserTenantModel:
     def test_user_tenant_creation(self):
         """Test creating a UserTenant instance."""
         user_tenant = UserTenant(
-            userId="usr_123",
-            tenantId="tnt_privileged",
+            id="ut-001",
+            userId="user-001",
+            tenantId="tenant-001",
         )
-        assert user_tenant.userId == "usr_123"
-        assert user_tenant.tenantId == "tnt_privileged"
+        assert user_tenant.id == "ut-001"
+        assert user_tenant.userId == "user-001"
+        assert user_tenant.tenantId == "tenant-001"
+        assert isinstance(user_tenant.addedAt, datetime)

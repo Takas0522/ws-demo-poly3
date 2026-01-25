@@ -4,6 +4,7 @@ Cosmos DB container setup script.
 This script creates the necessary containers for the Auth Service:
 - users container: stores user information (partition key: /id)
 - login-attempts container: stores login attempt logs (partition key: /loginId)
+- role-configs container: stores role service configurations (partition key: /serviceId)
 """
 import asyncio
 import sys
@@ -77,6 +78,7 @@ class CosmosDBSetup:
             # Create containers
             self.create_container_if_not_exists("users", "/id")
             self.create_container_if_not_exists("login-attempts", "/loginId")
+            self.create_container_if_not_exists("role-configs", "/serviceId")
 
             print("=" * 60)
             print("✓ Setup completed successfully!")

@@ -5,3 +5,5 @@ pydantic-settings>=2.6.0
 azure-cosmos>=4.8.0
 python-dotenv>=1.0.0
 bcrypt>=4.1.0
+pyjwt>=2.8.0
+cryptography>=42.0.4

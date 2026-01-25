@@ -1,0 +1,43 @@
+"""Password hashing and verification service using bcrypt."""
+import bcrypt
+from app.core.config import settings
+
+
+class PasswordService:
+    """Service for password hashing and verification."""
+    
+    @staticmethod
+    def hash_password(password: str) -> str:
+        """
+        Hash a password using bcrypt.
+        
+        Args:
+            password: Plain text password
+            
+        Returns:
+            Hashed password string
+        """
+        salt = bcrypt.gensalt(rounds=settings.password_bcrypt_rounds)
+        password_bytes = password.encode('utf-8')
+        hashed = bcrypt.hashpw(password_bytes, salt)
+        return hashed.decode('utf-8')
+    
+    @staticmethod
+    def verify_password(password: str, password_hash: str) -> bool:
+        """
+        Verify a password against its hash.
+        
+        Args:
+            password: Plain text password to verify
+            password_hash: Hashed password to compare against
+            
+        Returns:
+            True if password matches, False otherwise
+        """
+        password_bytes = password.encode('utf-8')
+        hash_bytes = password_hash.encode('utf-8')
+        return bcrypt.checkpw(password_bytes, hash_bytes)
+
+
+# Global password service instance
+password_service = PasswordService()

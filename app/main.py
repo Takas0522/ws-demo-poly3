@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.core.config import settings
 from app.core.cosmos import cosmos_client
-from app.api import health
+from app.api import health, auth
 
 
 @asynccontextmanager
@@ -28,6 +28,7 @@ app = FastAPI(
 
 # Include routers
 app.include_router(health.router, tags=["health"])
+app.include_router(auth.router, tags=["authentication"])
 
 
 @app.get("/")

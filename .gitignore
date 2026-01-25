@@ -44,6 +44,10 @@ htmlcov/
 .env
 .env.local
 
+# Keys (DO NOT COMMIT)
+keys/
+*.pem
+
 # OS
 .DS_Store
 Thumbs.db

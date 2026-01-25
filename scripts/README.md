@@ -10,7 +10,7 @@ Creates the necessary Cosmos DB containers for the Auth Service.
 
 **Usage:**
 ```bash
-cd /home/runner/work/ws-demo-poly3/ws-demo-poly3
+# From the project root directory
 python scripts/setup_containers.py
 ```
 
@@ -31,7 +31,7 @@ Seeds initial data into the Auth Service database.
 
 **Usage:**
 ```bash
-cd /home/runner/work/ws-demo-poly3/ws-demo-poly3
+# From the project root directory
 python scripts/seed_data.py
 ```
 
@@ -51,7 +51,7 @@ Runs the complete setup process (containers + seed data).
 
 **Usage:**
 ```bash
-cd /home/runner/work/ws-demo-poly3/ws-demo-poly3
+# From the project root directory
 python scripts/setup_all.py
 ```
 
@@ -111,3 +111,14 @@ For local development, you can use the Azure Cosmos DB Emulator:
 ### Admin user already exists
 - This is normal - the seed script will skip creating the admin user if it already exists
 - The existing admin user is preserved
+
+## Security Notes
+
+⚠️ **Important Security Considerations:**
+
+1. **Password Hashing:** The seed_data.py script uses SHA-256 for demonstration purposes only. In production:
+   - Use bcrypt, argon2, or scrypt for password hashing
+   - These libraries provide salting and slow computation
+   - Never use fast hash functions like SHA-256 for passwords
+
+2. **Default Credentials:** Always change the default admin password immediately after setup

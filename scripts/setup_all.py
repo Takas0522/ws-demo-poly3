@@ -7,8 +7,13 @@ This script runs both container setup and seed data creation:
 2. Seeds initial data (admin user)
 """
 import sys
-from setup_containers import CosmosDBSetup
-from seed_data import SeedData
+import os
+
+# Add parent directory to path to allow imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from scripts.setup_containers import CosmosDBSetup
+from scripts.seed_data import SeedData
 
 
 def main():

@@ -38,7 +38,16 @@ class SeedData:
         """
         Simple password hashing for demonstration purposes.
         
-        Note: In production, use proper password hashing like bcrypt or argon2.
+        Note: This implementation uses SHA-256 which is NOT secure for production use.
+        In production, you MUST use proper password hashing libraries like:
+        - bcrypt (recommended)
+        - argon2 (recommended)
+        - scrypt
+        
+        These libraries provide:
+        - Salting (protection against rainbow tables)
+        - Slow computation (resistance to brute-force attacks)
+        - Configurable work factors
         
         Args:
             password: Plain text password
@@ -46,8 +55,8 @@ class SeedData:
         Returns:
             Hashed password
         """
-        # Using SHA-256 for demo purposes
-        # In production, use bcrypt, argon2, or similar
+        # WARNING: Using SHA-256 for demo purposes only
+        # In production, replace with: bcrypt.hashpw(password.encode(), bcrypt.gensalt())
         return hashlib.sha256(password.encode()).hexdigest()
 
     def create_admin_user(self):

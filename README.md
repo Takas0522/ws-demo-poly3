@@ -1,17 +1,34 @@
-# Auth Service
+# Auth Service (認証認可サービス)
 
 Auth Service for ws-demo-poly3 project.
 
 ## Overview
 
-This service provides authentication and authorization functionality using FastAPI and Azure Cosmos DB.
+This service provides authentication and authorization functionality using FastAPI and Azure Cosmos DB. It handles user authentication via JWT tokens, role-based access control, and validates user access to the management application.
 
 ## Features
 
+- JWT-based authentication and authorization
+- User login and token generation
+- Token verification and refresh
+- Role-based access control (全体管理者, 管理者, 閲覧者)
+- Privileged tenant access validation
+- Login attempt tracking and account lockout
 - FastAPI web framework
 - Azure Cosmos DB integration
 - Health check endpoint
 - Environment-based configuration
+
+## Documentation
+
+### Service Documentation
+- [Service Specification](./docs/services/auth/spec.md) - Complete service specification including authentication flows, API endpoints, and security requirements
+- [Data Model](./docs/services/auth/data-model.md) - Cosmos DB schema for users, roles, and login attempts
+
+### Architecture Documentation
+- [API Guidelines](./docs/architecture/api-guidelines.md) - REST API design standards
+- [Authentication Flow](./docs/architecture/authentication-flow.md) - JWT-based authentication and authorization flows
+- [Database Design](./docs/architecture/database-design.md) - Cosmos DB container design and partition strategy
 
 ## Setup
 
@@ -82,6 +99,31 @@ Response:
 }
 ```
 
+### Authentication
+
+```bash
+# Login
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "loginId": "admin@example.com",
+  "password": "password"
+}
+
+# Verify Token
+POST /api/auth/verify
+Authorization: Bearer <jwt_token>
+
+# Refresh Token
+POST /api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "<refresh_token>"
+}
+```
+
 ### Root
 
 ```bash
@@ -89,6 +131,28 @@ GET /
 ```
 
 Returns basic service information.
+
+## Roles
+
+| Role | Description | Permissions |
+|------|-------------|-------------|
+| 全体管理者 | System-wide administrator | Full access to all services and operations |
+| 管理者 | Administrator | Can manage regular tenants and users |
+| 閲覧者 | Read-only user | Can only view information |
+
+## Access Control
+
+**IMPORTANT**: Only users belonging to **privileged tenants** can log in to the management application.
+
+## Database Schema
+
+### Containers
+
+- `users` - User information and credentials (Partition key: `/id`)
+- `login-attempts` - Login attempt tracking for security (Partition key: `/loginId`)
+- `role-configs` - Role definitions per service (Partition key: `/serviceId`)
+
+See [Data Model documentation](./docs/services/auth/data-model.md) for detailed schema.
 
 ## Testing
 
@@ -140,6 +204,26 @@ black app/ tests/
 # Lint code
 ruff check app/ tests/
 ```
+
+### Seeding Data
+
+```bash
+# Run data seeding script
+python scripts/seed_data.py
+
+# Setup all containers and seed data
+python scripts/setup_all.py
+```
+
+## Related Services
+
+- **User Management Service** (ws-demo-poly2) - Manages tenants and tenant users
+- **Service Setting Service** (ws-demo-poly4) - Manages service assignments to tenants
+- **Frontend** (ws-demo-poly1) - Web UI for the management application
+
+## License
+
+This project is part of the ws-demo-poly workspace.
 
 ## References
 

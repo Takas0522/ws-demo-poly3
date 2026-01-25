@@ -128,6 +128,7 @@ class JWTService:
             self._public_key,
             algorithms=[settings.jwt_algorithm],
             issuer=settings.jwt_issuer,
+            audience=settings.jwt_audience,
             options={"verify_exp": True}
         )
         

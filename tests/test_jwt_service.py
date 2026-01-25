@@ -38,11 +38,17 @@ class TestJWTService:
     def test_generate_refresh_token(self):
         """Test generating a refresh token."""
         user_id = "user-001"
+        token_id = "rt-test-token-id"
         
-        token = jwt_service.generate_refresh_token(user_id=user_id)
+        token, expires_at = jwt_service.generate_refresh_token(
+            user_id=user_id,
+            token_id=token_id
+        )
         
         assert token is not None
         assert isinstance(token, str)
+        assert expires_at is not None
+        assert isinstance(expires_at, datetime)
         
         # Verify token can be decoded (without audience verification for refresh tokens)
         payload = jwt.decode(
@@ -53,6 +59,7 @@ class TestJWTService:
             options={"verify_aud": False}
         )
         assert payload["sub"] == user_id
+        assert payload["jti"] == token_id
         assert payload["type"] == "refresh"
         assert payload["iss"] == settings.jwt_issuer
     
@@ -112,3 +119,94 @@ class TestJWTService:
         
         # Allow for small timing differences
         assert abs(actual_duration.total_seconds() - expected_duration.total_seconds()) < 5
+    
+    def test_verify_access_token_success(self):
+        """Test verifying a valid access token."""
+        user_id = "user-001"
+        name = "Test User"
+        tenants = [{"id": "tenant-001", "name": "特権テナント", "isPrivileged": True}]
+        roles = {"auth-service": ["全体管理者"]}
+        
+        token = jwt_service.generate_access_token(
+            user_id=user_id,
+            name=name,
+            tenants=tenants,
+            roles=roles
+        )
+        
+        payload, error_code = jwt_service.verify_access_token(token)
+        
+        assert payload is not None
+        assert error_code is None
+        assert payload["sub"] == user_id
+        assert payload["name"] == name
+    
+    def test_verify_access_token_invalid(self):
+        """Test verifying an invalid access token."""
+        invalid_token = "invalid.token.string"
+        
+        payload, error_code = jwt_service.verify_access_token(invalid_token)
+        
+        assert payload is None
+        assert error_code == "AUTH002"
+    
+    def test_verify_access_token_refresh_token_rejected(self):
+        """Test that refresh token cannot be used as access token."""
+        user_id = "user-001"
+        token_id = "rt-test-token-id"
+        
+        token, _ = jwt_service.generate_refresh_token(
+            user_id=user_id,
+            token_id=token_id
+        )
+        
+        payload, error_code = jwt_service.verify_access_token(token)
+        
+        assert payload is None
+        assert error_code == "AUTH002"  # Invalid token
+    
+    def test_verify_refresh_token_success(self):
+        """Test verifying a valid refresh token."""
+        user_id = "user-001"
+        token_id = "rt-test-token-id"
+        
+        token, _ = jwt_service.generate_refresh_token(
+            user_id=user_id,
+            token_id=token_id
+        )
+        
+        payload, error_code = jwt_service.verify_refresh_token(token)
+        
+        assert payload is not None
+        assert error_code is None
+        assert payload["sub"] == user_id
+        assert payload["jti"] == token_id
+        assert payload["type"] == "refresh"
+    
+    def test_verify_refresh_token_invalid(self):
+        """Test verifying an invalid refresh token."""
+        invalid_token = "invalid.token.string"
+        
+        payload, error_code = jwt_service.verify_refresh_token(invalid_token)
+        
+        assert payload is None
+        assert error_code == "AUTH002"
+    
+    def test_verify_refresh_token_access_token_rejected(self):
+        """Test that access token cannot be used as refresh token."""
+        user_id = "user-001"
+        name = "Test User"
+        tenants = [{"id": "tenant-001", "name": "特権テナント", "isPrivileged": True}]
+        roles = {"auth-service": ["全体管理者"]}
+        
+        token = jwt_service.generate_access_token(
+            user_id=user_id,
+            name=name,
+            tenants=tenants,
+            roles=roles
+        )
+        
+        payload, error_code = jwt_service.verify_refresh_token(token)
+        
+        assert payload is None
+        assert error_code == "AUTH002"  # Invalid token

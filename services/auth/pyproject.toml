@@ -2,7 +2,7 @@
 name = "auth-service"
 version = "0.1.0"
 description = "Auth Service for ws-demo-poly3"
-authors = ["Your Name <your.email@example.com>"]
+authors = []
 readme = "README.md"
 
 [tool.poetry.dependencies]

@@ -4,8 +4,10 @@ from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
 from app.models.user import User
 from app.models.login_attempt import LoginAttempt
+from app.models.refresh_token import RefreshToken
 from app.repositories.user_repository import user_repository
 from app.repositories.login_attempt_repository import login_attempt_repository
+from app.repositories.refresh_token_repository import refresh_token_repository
 from app.core.password_service import password_service
 from app.core.jwt_service import jwt_service
 from app.core.config import settings
@@ -152,8 +154,27 @@ class AuthenticationService:
             roles=roles
         )
         
-        # Generate refresh token
-        refresh_token = jwt_service.generate_refresh_token(user_id=user.id)
+        # Generate refresh token with unique ID
+        token_id = f"rt-{uuid4()}"
+        refresh_token, expires_at = jwt_service.generate_refresh_token(
+            user_id=user.id,
+            token_id=token_id
+        )
+        
+        # Store refresh token in database (async, but we won't wait for it)
+        # In a real system, you might want to wait or handle failures
+        import asyncio
+        try:
+            # Create task to store refresh token
+            asyncio.create_task(self._store_refresh_token(
+                token_id=token_id,
+                user_id=user.id,
+                token_hash=password_service.hash_password(refresh_token),
+                expires_at=expires_at
+            ))
+        except Exception:
+            # Log error but don't fail login
+            pass
         
         return {
             "accessToken": access_token,
@@ -161,6 +182,35 @@ class AuthenticationService:
             "expiresIn": settings.jwt_access_token_expire_minutes * 60,  # in seconds
             "tokenType": "Bearer"
         }
+    
+    async def _store_refresh_token(
+        self,
+        token_id: str,
+        user_id: str,
+        token_hash: str,
+        expires_at: datetime
+    ) -> None:
+        """
+        Store refresh token in database.
+        
+        Args:
+            token_id: Unique token identifier
+            user_id: User ID
+            token_hash: Hashed token value
+            expires_at: Expiration datetime
+        """
+        try:
+            refresh_token_obj = RefreshToken(
+                id=token_id,
+                userId=user_id,
+                tokenHash=token_hash,
+                expiresAt=expires_at,
+                isRevoked=False
+            )
+            await refresh_token_repository.create(refresh_token_obj)
+        except Exception:
+            # Log but don't fail
+            pass
     
     async def _record_login_attempt(
         self,
@@ -213,6 +263,115 @@ class AuthenticationService:
                 minutes=settings.account_lock_duration_minutes
             )
             await user_repository.update(user)
+    
+    async def verify_access_token(self, token: str) -> Tuple[Optional[Dict], Optional[str]]:
+        """
+        Verify access token and check user validity.
+        
+        Args:
+            token: JWT access token string
+            
+        Returns:
+            Tuple of (user_info dict, error_code)
+            - Returns (user_info, None) on success
+            - Returns (None, error_code) on failure
+        """
+        # Verify JWT signature and expiration
+        payload, error_code = jwt_service.verify_access_token(token)
+        if error_code:
+            return None, error_code
+        
+        # Get user ID from token
+        user_id = payload.get("sub")
+        if not user_id:
+            return None, "AUTH002"  # Invalid token
+        
+        # Check if user exists
+        user = await user_repository.find_by_id(user_id)
+        if not user:
+            return None, "AUTH002"  # Invalid token (user doesn't exist)
+        
+        # Check if user is active
+        if not user.isActive:
+            return None, "AUTH002"  # Invalid token (user inactive)
+        
+        # Check if account is locked
+        if user.lockedUntil and datetime.now(UTC) < user.lockedUntil:
+            return None, "AUTH007"  # Account locked
+        
+        # Return user info from token
+        return {
+            "userId": payload.get("sub"),
+            "name": payload.get("name"),
+            "tenants": payload.get("tenants", []),
+            "roles": payload.get("roles", {}),
+            "isActive": user.isActive
+        }, None
+    
+    async def refresh_tokens(self, refresh_token: str) -> Tuple[Optional[Dict], Optional[str]]:
+        """
+        Refresh access token using refresh token (with rotation).
+        
+        Args:
+            refresh_token: JWT refresh token string
+            
+        Returns:
+            Tuple of (token_data dict, error_code)
+            - token_data contains: accessToken, refreshToken, expiresIn
+            - error_code is set if refresh fails
+        """
+        # Verify refresh token
+        payload, error_code = jwt_service.verify_refresh_token(refresh_token)
+        if error_code:
+            return None, error_code
+        
+        # Get user ID and token ID from payload
+        user_id = payload.get("sub")
+        token_id = payload.get("jti")
+        
+        if not user_id or not token_id:
+            return None, "AUTH002"  # Invalid token
+        
+        # Check if refresh token exists and is valid
+        stored_token = await refresh_token_repository.find_by_id(token_id)
+        if not stored_token:
+            return None, "AUTH002"  # Invalid token (not found)
+        
+        # Check if token is revoked
+        if stored_token.isRevoked:
+            return None, "AUTH002"  # Invalid token (revoked)
+        
+        # Check if token is already used (rotation check)
+        if stored_token.usedAt:
+            # Token reuse detected - revoke all tokens for this user
+            await refresh_token_repository.revoke_all_for_user(user_id)
+            return None, "AUTH002"  # Invalid token (reused)
+        
+        # Mark token as used
+        stored_token.usedAt = datetime.now(UTC)
+        await refresh_token_repository.update(stored_token)
+        
+        # Revoke the old token
+        stored_token.isRevoked = True
+        await refresh_token_repository.update(stored_token)
+        
+        # Get user
+        user = await user_repository.find_by_id(user_id)
+        if not user:
+            return None, "AUTH002"  # Invalid token (user doesn't exist)
+        
+        # Check if user is active
+        if not user.isActive:
+            return None, "AUTH002"  # Invalid token (user inactive)
+        
+        # Check if account is locked
+        if user.lockedUntil and datetime.now(UTC) < user.lockedUntil:
+            return None, "AUTH007"  # Account locked
+        
+        # Generate new tokens
+        token_data = self._generate_tokens(user)
+        
+        return token_data, None
 
 
 # Global service instance

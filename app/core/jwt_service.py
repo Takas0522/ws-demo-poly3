@@ -1,6 +1,6 @@
 """JWT token generation and verification service."""
 from datetime import datetime, timedelta, UTC
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import jwt
 from pathlib import Path
 from app.core.config import settings
@@ -75,15 +75,16 @@ class JWTService:
         
         return token
     
-    def generate_refresh_token(self, user_id: str) -> str:
+    def generate_refresh_token(self, user_id: str, token_id: str) -> Tuple[str, datetime]:
         """
-        Generate refresh token.
+        Generate refresh token with token ID for rotation support.
         
         Args:
             user_id: User's unique identifier
+            token_id: Unique token identifier for tracking
             
         Returns:
-            Refresh token string
+            Tuple of (refresh token string, expiration datetime)
         """
         if not self._private_key:
             raise RuntimeError("Private key not loaded")
@@ -93,6 +94,7 @@ class JWTService:
         
         payload = {
             "sub": user_id,
+            "jti": token_id,  # JWT ID for tracking
             "type": "refresh",
             "iat": int(now.timestamp()),
             "exp": int(expires_at.timestamp()),
@@ -105,14 +107,15 @@ class JWTService:
             algorithm=settings.jwt_algorithm
         )
         
-        return token
+        return token, expires_at
     
-    def verify_token(self, token: str) -> Dict:
+    def verify_token(self, token: str, verify_audience: bool = True) -> Dict:
         """
         Verify and decode JWT token.
         
         Args:
             token: JWT token string
+            verify_audience: Whether to verify audience (False for refresh tokens)
             
         Returns:
             Decoded token payload
@@ -123,16 +126,83 @@ class JWTService:
         if not self._public_key:
             raise RuntimeError("Public key not loaded")
         
-        payload = jwt.decode(
-            token,
-            self._public_key,
-            algorithms=[settings.jwt_algorithm],
-            issuer=settings.jwt_issuer,
-            audience=settings.jwt_audience,
-            options={"verify_exp": True}
-        )
+        # Set options for audience verification
+        options = {"verify_exp": True}
+        if not verify_audience:
+            options["verify_aud"] = False
+        
+        # Build decode parameters
+        decode_params = {
+            "jwt": token,
+            "key": self._public_key,
+            "algorithms": [settings.jwt_algorithm],
+            "issuer": settings.jwt_issuer,
+            "options": options
+        }
+        
+        # Add audience only if we're verifying it
+        if verify_audience:
+            decode_params["audience"] = settings.jwt_audience
+        
+        payload = jwt.decode(**decode_params)
         
         return payload
+    
+    def verify_access_token(self, token: str) -> Tuple[Optional[Dict], Optional[str]]:
+        """
+        Verify access token and return payload or error code.
+        
+        Args:
+            token: JWT access token string
+            
+        Returns:
+            Tuple of (payload dict, error_code)
+            - Returns (payload, None) on success
+            - Returns (None, error_code) on failure
+        """
+        try:
+            payload = self.verify_token(token, verify_audience=True)
+            
+            # Check if it's a refresh token (should not be used as access token)
+            if payload.get("type") == "refresh":
+                return None, "AUTH002"  # Invalid token
+            
+            return payload, None
+            
+        except jwt.ExpiredSignatureError:
+            return None, "AUTH003"  # Token expired
+        except jwt.InvalidTokenError:
+            return None, "AUTH002"  # Invalid token
+        except Exception:
+            return None, "AUTH002"  # Invalid token
+    
+    def verify_refresh_token(self, token: str) -> Tuple[Optional[Dict], Optional[str]]:
+        """
+        Verify refresh token and return payload or error code.
+        
+        Args:
+            token: JWT refresh token string
+            
+        Returns:
+            Tuple of (payload dict, error_code)
+            - Returns (payload, None) on success
+            - Returns (None, error_code) on failure
+        """
+        try:
+            payload = self.verify_token(token, verify_audience=False)
+            
+            # Check if it's actually a refresh token
+            if payload.get("type") != "refresh":
+                return None, "AUTH002"  # Invalid token
+            
+            return payload, None
+            
+        except jwt.ExpiredSignatureError:
+            return None, "AUTH003"  # Token expired
+        except jwt.InvalidTokenError:
+            return None, "AUTH002"  # Invalid token
+        except Exception:
+            return None, "AUTH002"  # Invalid token
 
 
 # Global JWT service instance

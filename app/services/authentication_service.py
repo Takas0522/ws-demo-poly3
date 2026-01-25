@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta, UTC
 from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
+import logging
 from app.models.user import User
 from app.models.login_attempt import LoginAttempt
 from app.models.refresh_token import RefreshToken
@@ -11,6 +12,9 @@ from app.repositories.refresh_token_repository import refresh_token_repository
 from app.core.password_service import password_service
 from app.core.jwt_service import jwt_service
 from app.core.config import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class AuthenticationService:
@@ -208,9 +212,9 @@ class AuthenticationService:
                 isRevoked=False
             )
             await refresh_token_repository.create(refresh_token_obj)
-        except Exception:
-            # Log but don't fail
-            pass
+        except Exception as e:
+            # Log error but don't fail authentication
+            logger.error(f"Failed to store refresh token for user {user_id}: {str(e)}")
     
     async def _record_login_attempt(
         self,
@@ -347,11 +351,8 @@ class AuthenticationService:
             await refresh_token_repository.revoke_all_for_user(user_id)
             return None, "AUTH002"  # Invalid token (reused)
         
-        # Mark token as used
+        # Mark token as used and revoke it in a single update
         stored_token.usedAt = datetime.now(UTC)
-        await refresh_token_repository.update(stored_token)
-        
-        # Revoke the old token
         stored_token.isRevoked = True
         await refresh_token_repository.update(stored_token)
         

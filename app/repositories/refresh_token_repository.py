@@ -2,9 +2,13 @@
 from typing import Optional
 from datetime import datetime, UTC
 from uuid import uuid4
+import logging
 from azure.cosmos.exceptions import CosmosResourceNotFoundError
 from app.models.refresh_token import RefreshToken
 from app.core.cosmos import cosmos_client
+
+
+logger = logging.getLogger(__name__)
 
 
 class RefreshTokenRepository:
@@ -52,20 +56,29 @@ class RefreshTokenRepository:
     
     async def find_by_user_id(self, user_id: str) -> list[RefreshToken]:
         """
-        Find all refresh tokens for a user.
+        Find all valid refresh tokens for a user.
         
         Args:
             user_id: User's unique identifier
             
         Returns:
-            List of RefreshToken instances
+            List of valid RefreshToken instances (non-revoked and non-expired)
         """
         container = cosmos_client.users_container
         if not container:
             return []
         
-        query = "SELECT * FROM c WHERE c.userId = @userId AND c.isRevoked = false"
-        parameters = [{"name": "@userId", "value": user_id}]
+        now = datetime.now(UTC)
+        query = """
+            SELECT * FROM c 
+            WHERE c.userId = @userId 
+            AND c.isRevoked = false 
+            AND c.expiresAt > @now
+        """
+        parameters = [
+            {"name": "@userId", "value": user_id},
+            {"name": "@now", "value": now.isoformat()}
+        ]
         
         try:
             items = list(container.query_items(

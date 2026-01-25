@@ -57,6 +57,8 @@ class SeedData:
     def create_admin_user(self):
         """Create the privileged tenant's global admin user."""
         admin_id = "user-admin-001"
+        privileged_tenant_id = "tenant-001"
+        
         admin_user = {
             "id": admin_id,
             "loginId": "admin@saas-platform.local",
@@ -64,8 +66,17 @@ class SeedData:
             "passwordHash": self.hash_password("Admin@123"),  # Default admin password
             "isActive": True,
             "lockedUntil": None,
+            "roles": [
+                {
+                    "serviceId": "auth-service",
+                    "roleId": "role-auth-admin",
+                    "roleName": "全体管理者"
+                }
+            ],
+            "tenantIds": [privileged_tenant_id],
             "createdAt": datetime.now(UTC).isoformat(),
             "updatedAt": datetime.now(UTC).isoformat(),
+            "_type": "User"
         }
 
         try:
@@ -82,6 +93,8 @@ class SeedData:
                 print(f"✓ Created admin user '{admin_user['loginId']}'")
                 print(f"  User ID: {admin_id}")
                 print(f"  Login ID: {admin_user['loginId']}")
+                print(f"  Tenant ID: {privileged_tenant_id}")
+                print(f"  Role: 全体管理者 (auth-service)")
                 print(f"  Default Password: Admin@123")
                 print(f"  ⚠️  Please change the default password after first login!")
                 return created_user

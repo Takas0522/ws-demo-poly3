@@ -23,6 +23,8 @@ class TestUserModel:
         assert user.passwordHash == "hashed_password"
         assert user.isActive is True
         assert user.lockedUntil is None
+        assert user.roles is None
+        assert user.tenantIds is None
         assert isinstance(user.createdAt, datetime)
         assert isinstance(user.updatedAt, datetime)
 
@@ -50,6 +52,33 @@ class TestUserModel:
         )
         assert user.isActive is True
         assert user.lockedUntil is None
+
+    def test_user_with_embedded_roles_and_tenants(self):
+        """Test creating a User with embedded roles and tenantIds."""
+        from app.models.user import UserRole as EmbeddedUserRole
+        
+        user = User(
+            id="user-001",
+            loginId="admin@example.com",
+            name="システム管理者",
+            passwordHash="hashed_password",
+            isActive=True,
+            roles=[
+                EmbeddedUserRole(
+                    serviceId="auth-service",
+                    roleId="role-auth-admin",
+                    roleName="全体管理者"
+                )
+            ],
+            tenantIds=["tenant-001"],
+        )
+        assert user.id == "user-001"
+        assert user.roles is not None
+        assert len(user.roles) == 1
+        assert user.roles[0].serviceId == "auth-service"
+        assert user.roles[0].roleId == "role-auth-admin"
+        assert user.roles[0].roleName == "全体管理者"
+        assert user.tenantIds == ["tenant-001"]
 
 
 class TestLoginAttemptModel:

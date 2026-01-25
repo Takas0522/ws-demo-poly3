@@ -1,7 +1,14 @@
 """User model for authentication."""
 from datetime import datetime, UTC
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
+
+
+class UserRole(BaseModel):
+    """Embedded user role information."""
+    serviceId: str = Field(..., description="Service identifier")
+    roleId: str = Field(..., description="Role identifier")
+    roleName: str = Field(..., description="Role name")
 
 
 class User(BaseModel):
@@ -15,6 +22,8 @@ class User(BaseModel):
         passwordHash: Hashed password
         isActive: Whether the user account is active
         lockedUntil: Timestamp until which the account is locked (None if not locked)
+        roles: List of roles assigned to the user (embedded)
+        tenantIds: List of tenant IDs the user belongs to (embedded)
         createdAt: Account creation timestamp
         updatedAt: Last update timestamp
     """
@@ -22,14 +31,22 @@ class User(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "id": "usr_123456789",
+                "id": "user-001",
                 "loginId": "admin@example.com",
-                "name": "System Administrator",
+                "name": "システム管理者",
                 "passwordHash": "$2b$12$KIXxLVEz7qGN.QqZ0qZ0qe",
                 "isActive": True,
                 "lockedUntil": None,
-                "createdAt": "2024-01-01T00:00:00Z",
-                "updatedAt": "2024-01-01T00:00:00Z",
+                "roles": [
+                    {
+                        "serviceId": "auth-service",
+                        "roleId": "role-auth-admin",
+                        "roleName": "全体管理者"
+                    }
+                ],
+                "tenantIds": ["tenant-001"],
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z",
             }
         }
     )
@@ -41,6 +58,12 @@ class User(BaseModel):
     isActive: bool = Field(default=True, description="Whether the user account is active")
     lockedUntil: Optional[datetime] = Field(
         default=None, description="Timestamp until which the account is locked"
+    )
+    roles: Optional[List[UserRole]] = Field(
+        default=None, description="List of roles assigned to the user"
+    )
+    tenantIds: Optional[List[str]] = Field(
+        default=None, description="List of tenant IDs the user belongs to"
     )
     createdAt: datetime = Field(
         default_factory=lambda: datetime.now(UTC), description="Account creation timestamp"

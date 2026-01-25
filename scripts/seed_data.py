@@ -3,6 +3,8 @@ Seed data script for Auth Service.
 
 This script creates initial seed data including:
 - Privileged tenant's global admin user
+- UserRole assignment for the admin user
+- UserTenant assignment for the admin user
 """
 import sys
 import uuid
@@ -10,7 +12,7 @@ from datetime import datetime, UTC
 from azure.cosmos import CosmosClient, exceptions
 from dotenv import load_dotenv
 import os
-import hashlib
+import bcrypt
 
 # Load environment variables
 load_dotenv()
@@ -36,41 +38,45 @@ class SeedData:
 
     def hash_password(self, password: str) -> str:
         """
-        Simple password hashing for demonstration purposes.
+        Hash password using bcrypt.
         
-        Note: This implementation uses SHA-256 which is NOT secure for production use.
-        In production, you MUST use proper password hashing libraries like:
-        - bcrypt (recommended)
-        - argon2 (recommended)
-        - scrypt
-        
-        These libraries provide:
-        - Salting (protection against rainbow tables)
-        - Slow computation (resistance to brute-force attacks)
-        - Configurable work factors
+        Uses bcrypt with cost factor 12 as specified in the documentation.
+        This provides strong protection against brute-force attacks.
         
         Args:
             password: Plain text password
             
         Returns:
-            Hashed password
+            Hashed password (bcrypt hash string)
         """
-        # WARNING: Using SHA-256 for demo purposes only
-        # In production, replace with: bcrypt.hashpw(password.encode(), bcrypt.gensalt())
-        return hashlib.sha256(password.encode()).hexdigest()
+        # Using bcrypt with cost factor 12 as per documentation
+        salt = bcrypt.gensalt(rounds=12)
+        hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+        return hashed.decode('utf-8')
 
     def create_admin_user(self):
         """Create the privileged tenant's global admin user."""
-        admin_id = "usr_admin_001"
+        admin_id = "user-admin-001"
+        privileged_tenant_id = "tenant-001"
+        
         admin_user = {
             "id": admin_id,
             "loginId": "admin@saas-platform.local",
-            "name": "System Administrator",
+            "name": "システム管理者",
             "passwordHash": self.hash_password("Admin@123"),  # Default admin password
             "isActive": True,
             "lockedUntil": None,
+            "roles": [
+                {
+                    "serviceId": "auth-service",
+                    "roleId": "role-auth-admin",
+                    "roleName": "全体管理者"
+                }
+            ],
+            "tenantIds": [privileged_tenant_id],
             "createdAt": datetime.now(UTC).isoformat(),
             "updatedAt": datetime.now(UTC).isoformat(),
+            "_type": "User"
         }
 
         try:
@@ -85,7 +91,10 @@ class SeedData:
                 # User doesn't exist, create it
                 created_user = self.users_container.create_item(body=admin_user)
                 print(f"✓ Created admin user '{admin_user['loginId']}'")
+                print(f"  User ID: {admin_id}")
                 print(f"  Login ID: {admin_user['loginId']}")
+                print(f"  Tenant ID: {privileged_tenant_id}")
+                print(f"  Role: 全体管理者 (auth-service)")
                 print(f"  Default Password: Admin@123")
                 print(f"  ⚠️  Please change the default password after first login!")
                 return created_user

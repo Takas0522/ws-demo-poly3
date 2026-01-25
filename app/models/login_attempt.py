@@ -10,31 +10,31 @@ class LoginAttempt(BaseModel):
     
     Attributes:
         id: Unique identifier for the login attempt
+        userId: User identifier (if user was identified)
         loginId: Login identifier (email or username) that was used
         isSuccess: Whether the login attempt was successful
         ipAddress: IP address from which the login was attempted
-        userAgent: User agent string from the client
         attemptedAt: Timestamp of the login attempt
     """
     
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "id": "att_123456789",
+                "id": "la-001",
+                "userId": "user-001",
                 "loginId": "admin@example.com",
-                "isSuccess": True,
-                "ipAddress": "192.168.1.100",
-                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-                "attemptedAt": "2024-01-01T12:00:00Z",
+                "isSuccess": False,
+                "ipAddress": "192.168.1.1",
+                "attemptedAt": "2026-01-24T09:00:00Z",
             }
         }
     )
     
     id: str = Field(..., description="Unique identifier for the login attempt")
+    userId: Optional[str] = Field(default=None, description="User identifier (if user was identified)")
     loginId: str = Field(..., description="Login identifier (email or username)")
     isSuccess: bool = Field(..., description="Whether the login attempt was successful")
-    ipAddress: Optional[str] = Field(default=None, description="IP address of the client")
-    userAgent: Optional[str] = Field(default=None, description="User agent string")
+    ipAddress: str = Field(..., description="IP address of the client")
     attemptedAt: datetime = Field(
         default_factory=lambda: datetime.now(UTC), description="Timestamp of the login attempt"
     )

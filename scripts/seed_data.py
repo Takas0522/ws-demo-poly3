@@ -71,6 +71,11 @@ class SeedData:
                     "serviceId": "auth-service",
                     "roleId": "role-auth-admin",
                     "roleName": "全体管理者"
+                },
+                {
+                    "serviceId": "service-setting-service",
+                    "roleId": "role-service-setting-admin",
+                    "roleName": "全体管理者"
                 }
             ],
             "tenantIds": [privileged_tenant_id],

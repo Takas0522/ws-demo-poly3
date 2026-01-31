@@ -122,6 +122,132 @@ class UserService:
             logger.error(f"Failed to create user: {str(e)}")
             return None, "COMMON_INTERNAL_ERROR"
 
+    async def get_user_by_id(self, user_id: str) -> Optional[User]:
+        """
+        Get user by ID.
+
+        Args:
+            user_id: User's unique identifier
+
+        Returns:
+            User instance or None if not found
+        """
+        try:
+            user = await user_repository.find_by_id(user_id)
+            return user
+        except Exception as e:
+            logger.error(f"Failed to get user {user_id}: {str(e)}")
+            return None
+
+    async def update_user(
+        self,
+        user_id: str,
+        name: Optional[str] = None,
+        password: Optional[str] = None,
+        tenant_ids: Optional[List[str]] = None,
+        roles: Optional[List[Dict[str, str]]] = None,
+        is_active: Optional[bool] = None,
+    ) -> Tuple[Optional[User], Optional[str]]:
+        """
+        Update an existing user.
+
+        Args:
+            user_id: User's unique identifier
+            name: User's display name (optional)
+            password: Plain text password to reset (optional)
+            tenant_ids: List of tenant IDs (optional)
+            roles: List of role dictionaries (optional)
+            is_active: Account active status (optional)
+
+        Returns:
+            Tuple of (User instance, error_code)
+            - Returns (user, None) on success
+            - Returns (None, error_code) on failure
+        """
+        # Get existing user
+        user = await user_repository.find_by_id(user_id)
+        if not user:
+            return None, "AUTH_USER_NOT_FOUND"
+
+        # Update fields if provided
+        if name is not None:
+            user.name = name
+        
+        if password is not None:
+            # Hash new password
+            user.passwordHash = password_service.hash_password(password)
+        
+        if tenant_ids is not None:
+            user.tenantIds = tenant_ids
+        
+        if roles is not None:
+            # Convert roles to UserRole objects
+            user.roles = [
+                UserRole(
+                    serviceId=role.get("serviceId"),
+                    roleId=role.get("roleId"),
+                    roleName=role.get("roleName"),
+                )
+                for role in roles
+            ]
+        
+        if is_active is not None:
+            user.isActive = is_active
+
+        # Update timestamp
+        user.updatedAt = datetime.now(UTC)
+
+        # Save to database
+        try:
+            updated_user = await user_repository.update(user)
+            return updated_user, None
+        except Exception as e:
+            logger.error(f"Failed to update user {user_id}: {str(e)}")
+            return None, "COMMON_INTERNAL_ERROR"
+
+    async def update_user_roles(
+        self,
+        user_id: str,
+        roles: List[Dict[str, str]],
+    ) -> Tuple[Optional[User], Optional[str]]:
+        """
+        Update user roles.
+
+        Args:
+            user_id: User's unique identifier
+            roles: List of role dictionaries with serviceId, roleId, roleName
+
+        Returns:
+            Tuple of (User instance, error_code)
+            - Returns (user, None) on success
+            - Returns (None, error_code) on failure
+        """
+        # Get existing user
+        user = await user_repository.find_by_id(user_id)
+        if not user:
+            return None, "AUTH_USER_NOT_FOUND"
+
+        # Convert roles to UserRole objects
+        user.roles = [
+            UserRole(
+                serviceId=role.get("serviceId"),
+                roleId=role.get("roleId"),
+                roleName=role.get("roleName"),
+            )
+            for role in roles
+        ]
+
+        # Update timestamp
+        user.updatedAt = datetime.now(UTC)
+
+        # Save to database
+        try:
+            updated_user = await user_repository.update(user)
+            return updated_user, None
+        except Exception as e:
+            logger.error(f"Failed to update user roles for {user_id}: {str(e)}")
+            return None, "COMMON_INTERNAL_ERROR"
+
 
 # Global service instance
 user_service = UserService()

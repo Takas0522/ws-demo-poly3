@@ -26,6 +26,8 @@ class CosmosDBClient:
             # Initialize container proxies for all containers
             self._containers["users"] = self._database.get_container_client("users")
             self._containers["login-attempts"] = self._database.get_container_client("login-attempts")
+            self._containers["roles"] = self._database.get_container_client("roles")
+            self._containers["role-configs"] = self._database.get_container_client("role-configs")
         except Exception as e:
             # Log the error but don't fail startup - allow the service to run without DB
             print(f"Warning: Failed to connect to Cosmos DB: {e}")
@@ -75,6 +77,16 @@ class CosmosDBClient:
     def login_attempts_container(self) -> Optional[ContainerProxy]:
         """Get the login-attempts container."""
         return self._containers.get("login-attempts")
+
+    @property
+    def roles_container(self) -> Optional[ContainerProxy]:
+        """Get the roles container."""
+        return self._containers.get("roles")
+
+    @property
+    def role_configs_container(self) -> Optional[ContainerProxy]:
+        """Get the role-configs container."""
+        return self._containers.get("role-configs")
 
 
 # Global instance

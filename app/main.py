@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.cosmos import cosmos_client
-from app.api import health, auth, users
+from app.api import health, auth, users, roles
 
 
 @asynccontextmanager
@@ -40,6 +40,7 @@ app.add_middleware(
 app.include_router(health.router, tags=["health"])
 app.include_router(auth.router, tags=["authentication"])
 app.include_router(users.router, tags=["users"])
+app.include_router(roles.router, tags=["roles"])
 
 
 @app.get("/")

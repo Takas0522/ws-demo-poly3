@@ -30,7 +30,12 @@ class CosmosDBSetup:
                 "COSMOSDB_ENDPOINT and COSMOSDB_KEY must be set in environment variables"
             )
 
-        self.client = CosmosClient(self.endpoint, self.key)
+        # For local emulator, disable endpoint discovery to avoid 127.0.0.1 redirect issues
+        self.client = CosmosClient(
+            self.endpoint, 
+            self.key,
+            connection_verify=False  # Disable SSL verification for emulator
+        )
 
     def create_database_if_not_exists(self):
         """Create the database if it doesn't exist."""

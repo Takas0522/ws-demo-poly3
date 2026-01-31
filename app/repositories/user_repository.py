@@ -149,7 +149,10 @@ class UserRepository:
         query = " ".join(query_parts)
 
         try:
-            # Get all items (Cosmos DB doesn't support OFFSET/LIMIT in queries)
+            # Note: Cosmos DB Python SDK doesn't support OFFSET/LIMIT in SQL queries
+            # This implementation loads all filtered items into memory and applies pagination manually
+            # For large datasets, consider implementing cursor-based pagination with continuation tokens
+            # or using server-side pagination features if available in future SDK versions
             items = list(
                 container.query_items(
                     query=query, parameters=parameters, enable_cross_partition_query=True

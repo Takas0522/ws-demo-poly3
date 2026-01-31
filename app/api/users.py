@@ -321,3 +321,341 @@ async def create_user(request: CreateUserRequest, current_user: Dict = Depends(g
     )
 
     return UserCreatedResponse(data=user_response)
+
+
+class UpdateUserRequest(BaseModel):
+    """Update user request model."""
+
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100, description="User's display name")
+    password: Optional[str] = Field(default=None, min_length=8, max_length=100, description="New password")
+    tenantIds: Optional[List[str]] = Field(default=None, description="List of tenant IDs")
+    roles: Optional[List[UserRoleInput]] = Field(default=None, description="List of roles")
+    isActive: Optional[bool] = Field(default=None, description="Whether the user account is active")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "name": "更新されたユーザー名",
+                "password": "NewSecurePass123!",
+                "tenantIds": ["tenant-001"],
+                "roles": [
+                    {
+                        "serviceId": "auth-service",
+                        "roleId": "role-auth-admin",
+                        "roleName": "全体管理者",
+                    }
+                ],
+                "isActive": True,
+            }
+        }
+    }
+
+
+class UpdateUserRolesRequest(BaseModel):
+    """Update user roles request model."""
+
+    roles: List[UserRoleInput] = Field(..., description="List of roles to assign")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "roles": [
+                    {
+                        "serviceId": "auth-service",
+                        "roleId": "role-auth-admin",
+                        "roleName": "全体管理者",
+                    },
+                    {
+                        "serviceId": "tenant-service",
+                        "roleId": "role-tenant-viewer",
+                        "roleName": "閲覧者",
+                    }
+                ]
+            }
+        }
+    }
+
+
+@router.get(
+    "/{id}",
+    response_model=UserResponse,
+    responses={
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
+        403: {"model": ErrorResponse, "description": "Forbidden"},
+        404: {"model": ErrorResponse, "description": "User not found"},
+    },
+)
+async def get_user(
+    id: str,
+    current_user: Dict = Depends(get_current_user),
+):
+    """
+    Get user details by ID.
+
+    Requires authentication. Accessible by users with '全体管理者' (Global Admin)
+    or '閲覧者' (Viewer) roles.
+
+    **Path Parameters:**
+    - **id**: User ID
+
+    **Role Requirements:**
+    - 全体管理者 (Global Admin): ✅
+    - 閲覧者 (Viewer): ✅
+    """
+    # Check if user has required roles (全体管理者 or 閲覧者)
+    user_roles = current_user.get("roles", {}).get("auth-service", [])
+    has_access = "全体管理者" in user_roles or "閲覧者" in user_roles
+
+    if not has_access:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": {
+                    "code": "AUTH_INSUFFICIENT_PERMISSION",
+                    "message": "この操作を実行する権限がありません",
+                }
+            },
+        )
+
+    # Get user from service
+    user = await user_service.get_user_by_id(id)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": {
+                    "code": "AUTH_USER_NOT_FOUND",
+                    "message": "指定されたユーザーが見つかりません",
+                }
+            },
+        )
+
+    # Convert to response format
+    roles_response = None
+    if user.roles:
+        roles_response = [
+            UserRoleResponse(
+                serviceId=role.serviceId, roleId=role.roleId, roleName=role.roleName
+            )
+            for role in user.roles
+        ]
+
+    user_response = UserResponse(
+        id=user.id,
+        loginId=user.loginId,
+        name=user.name,
+        isActive=user.isActive,
+        tenantIds=user.tenantIds,
+        roles=roles_response,
+        createdAt=user.createdAt.isoformat(),
+        updatedAt=user.updatedAt.isoformat(),
+    )
+
+    return user_response
+
+
+@router.put(
+    "/{id}",
+    response_model=UserResponse,
+    responses={
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
+        403: {"model": ErrorResponse, "description": "Forbidden"},
+        404: {"model": ErrorResponse, "description": "User not found"},
+        422: {"model": ErrorResponse, "description": "Validation error"},
+    },
+)
+async def update_user(
+    id: str,
+    request: UpdateUserRequest,
+    current_user: Dict = Depends(get_current_user),
+):
+    """
+    Update user information.
+
+    Requires authentication and '全体管理者' (Global Admin) role.
+
+    **Path Parameters:**
+    - **id**: User ID
+
+    **Request Body:**
+    - **name**: User's display name (optional)
+    - **password**: New password (optional, will be hashed)
+    - **tenantIds**: List of tenant IDs (optional)
+    - **roles**: List of roles to assign (optional)
+    - **isActive**: Account active status (optional)
+
+    **Features:**
+    - Password reset (hashed with bcrypt cost=12)
+    - Account enable/disable toggle
+    - Role assignment/change
+    - Tenant assignment
+
+    **Role Requirements:**
+    - 全体管理者 (Global Admin): ✅
+    - 閲覧者 (Viewer): ❌
+    """
+    # Check if user has 全体管理者 role
+    user_roles = current_user.get("roles", {}).get("auth-service", [])
+    if "全体管理者" not in user_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": {
+                    "code": "AUTH_INSUFFICIENT_PERMISSION",
+                    "message": "この操作を実行する権限がありません",
+                }
+            },
+        )
+
+    # Convert roles to dict format if provided
+    roles_dict = None
+    if request.roles is not None:
+        roles_dict = [
+            {"serviceId": role.serviceId, "roleId": role.roleId, "roleName": role.roleName}
+            for role in request.roles
+        ]
+
+    # Update user
+    user, error_code = await user_service.update_user(
+        user_id=id,
+        name=request.name,
+        password=request.password,
+        tenant_ids=request.tenantIds,
+        roles=roles_dict,
+        is_active=request.isActive,
+    )
+
+    # Handle errors
+    if error_code:
+        if error_code == "AUTH_USER_NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": {
+                        "code": error_code,
+                        "message": "指定されたユーザーが見つかりません",
+                    }
+                },
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"error": {"code": error_code, "message": "ユーザーの更新に失敗しました"}},
+            )
+
+    # Convert to response format
+    roles_response = None
+    if user.roles:
+        roles_response = [
+            UserRoleResponse(serviceId=role.serviceId, roleId=role.roleId, roleName=role.roleName)
+            for role in user.roles
+        ]
+
+    user_response = UserResponse(
+        id=user.id,
+        loginId=user.loginId,
+        name=user.name,
+        isActive=user.isActive,
+        tenantIds=user.tenantIds,
+        roles=roles_response,
+        createdAt=user.createdAt.isoformat(),
+        updatedAt=user.updatedAt.isoformat(),
+    )
+
+    return user_response
+
+
+@router.put(
+    "/{id}/roles",
+    response_model=UserResponse,
+    responses={
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
+        403: {"model": ErrorResponse, "description": "Forbidden"},
+        404: {"model": ErrorResponse, "description": "User not found"},
+        422: {"model": ErrorResponse, "description": "Validation error"},
+    },
+)
+async def update_user_roles(
+    id: str,
+    request: UpdateUserRolesRequest,
+    current_user: Dict = Depends(get_current_user),
+):
+    """
+    Update user roles.
+
+    Requires authentication and '全体管理者' (Global Admin) role.
+
+    **Path Parameters:**
+    - **id**: User ID
+
+    **Request Body:**
+    - **roles**: List of roles to assign (replaces existing roles)
+
+    **Role Requirements:**
+    - 全体管理者 (Global Admin): ✅
+    - 閲覧者 (Viewer): ❌
+    """
+    # Check if user has 全体管理者 role
+    user_roles = current_user.get("roles", {}).get("auth-service", [])
+    if "全体管理者" not in user_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": {
+                    "code": "AUTH_INSUFFICIENT_PERMISSION",
+                    "message": "この操作を実行する権限がありません",
+                }
+            },
+        )
+
+    # Convert roles to dict format
+    roles_dict = [
+        {"serviceId": role.serviceId, "roleId": role.roleId, "roleName": role.roleName}
+        for role in request.roles
+    ]
+
+    # Update user roles
+    user, error_code = await user_service.update_user_roles(
+        user_id=id,
+        roles=roles_dict,
+    )
+
+    # Handle errors
+    if error_code:
+        if error_code == "AUTH_USER_NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": {
+                        "code": error_code,
+                        "message": "指定されたユーザーが見つかりません",
+                    }
+                },
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"error": {"code": error_code, "message": "ユーザーロールの更新に失敗しました"}},
+            )
+
+    # Convert to response format
+    roles_response = None
+    if user.roles:
+        roles_response = [
+            UserRoleResponse(serviceId=role.serviceId, roleId=role.roleId, roleName=role.roleName)
+            for role in user.roles
+        ]
+
+    user_response = UserResponse(
+        id=user.id,
+        loginId=user.loginId,
+        name=user.name,
+        isActive=user.isActive,
+        tenantIds=user.tenantIds,
+        roles=roles_response,
+        createdAt=user.createdAt.isoformat(),
+        updatedAt=user.updatedAt.isoformat(),
+    )
+
+    return user_response

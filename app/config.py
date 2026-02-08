@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expiration_hours: int = 24
 
+    # Application Insights settings
+    applicationinsights_connection_string: str = ""
+
     # Log settings
     log_level: str = "INFO"
 

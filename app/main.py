@@ -5,6 +5,7 @@ import logging
 from app.config import get_settings
 from app.api.v1 import health, services
 from app.repositories.service_repository import service_repository
+from app.utils.telemetry import setup_telemetry
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +22,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Application Insights テレメトリ & 集約例外ハンドラの初期化
+setup_telemetry(app, settings.applicationinsights_connection_string or None)
 
 # CORS configuration
 app.add_middleware(

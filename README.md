@@ -2,7 +2,7 @@
 
 ## 概要
 
-本サービスは、テナントごとのサービス利用設定を管理するマイクロサービスです。  
+本サービスは、テナントごとのサービス利用設定を管理するマイクロサービスです。
 各テナントが利用できるサービスを割り当て、利用状況を管理します。
 
 ## 技術スタック
@@ -85,6 +85,7 @@ python -m app.scripts.init_db
 ```
 
 初期データ（モックサービス含む）を自動で登録します：
+
 - ファイル管理サービス
 - メッセージングサービス
 - API利用サービス
@@ -124,8 +125,8 @@ services = [
 # app/services/tenant_service_service.py
 class TenantServiceService:
     async def assign_service(
-        self, 
-        tenant_id: str, 
+        self,
+        tenant_id: str,
         service_id: str
     ) -> TenantService:
         # テナント存在チェック
@@ -168,12 +169,14 @@ pytest tests/integration/
 ### サービス管理
 
 #### サービス一覧取得
+
 ```http
 GET /api/v1/services
 Authorization: Bearer {token}
 ```
 
 **レスポンス**:
+
 ```json
 {
   "items": [
@@ -183,8 +186,8 @@ Authorization: Bearer {token}
       "name": "ファイル管理サービス",
       "description": "ファイルのアップロード・管理機能を提供",
       "available_roles": [
-        {"code": "admin", "name": "管理者"},
-        {"code": "user", "name": "ユーザー"}
+        { "code": "admin", "name": "管理者" },
+        { "code": "user", "name": "ユーザー" }
       ],
       "created_at": "2024-01-15T10:00:00Z"
     }
@@ -193,12 +196,14 @@ Authorization: Bearer {token}
 ```
 
 #### サービス詳細取得
+
 ```http
 GET /api/v1/services/{service_id}
 Authorization: Bearer {token}
 ```
 
 #### サービス作成
+
 ```http
 POST /api/v1/services
 Authorization: Bearer {token}
@@ -217,12 +222,14 @@ Content-Type: application/json
 ### テナントサービス割り当て
 
 #### テナントのサービス一覧取得
+
 ```http
 GET /api/v1/tenant-services?tenant_id={tenant_id}
 Authorization: Bearer {token}
 ```
 
 **レスポンス**:
+
 ```json
 {
   "items": [
@@ -241,6 +248,7 @@ Authorization: Bearer {token}
 ```
 
 #### サービス割り当て
+
 ```http
 POST /api/v1/tenant-services
 Authorization: Bearer {token}
@@ -253,12 +261,13 @@ Content-Type: application/json
 ```
 
 #### サービス割り当て解除
+
 ```http
 DELETE /api/v1/tenant-services/{tenant_service_id}
 Authorization: Bearer {token}
 ```
 
-詳細は [API設計仕様書](../../docs/arch/api/api-specification.md#4-利用サービス設定サービス-api) を参照してください。
+詳細は [API設計仕様書](./docs/api-specification.md) を参照してください。
 
 ## データモデル
 
@@ -308,21 +317,25 @@ Authorization: Bearer {token}
 以下のサービスは初期データとして登録されます：
 
 ### 1. ファイル管理サービス
+
 - **コード**: `file_management`
 - **ロール**: 管理者、ユーザー
 - **機能**: ファイルのアップロード・管理
 
 ### 2. メッセージングサービス
+
 - **コード**: `messaging`
 - **ロール**: 管理者、ユーザー
 - **機能**: メッセージの送信・閲覧
 
 ### 3. API利用サービス
+
 - **コード**: `api_usage`
 - **ロール**: 管理者、ユーザー
 - **機能**: API設定・利用
 
 ### 4. バックアップサービス
+
 - **コード**: `backup`
 - **ロール**: 管理者、閲覧者
 - **機能**: バックアップの実行・復元
@@ -362,10 +375,12 @@ curl http://localhost:8002/health
 
 ## 関連ドキュメント
 
-- [コンポーネント設計 - 利用サービス設定サービス](../../docs/arch/components/README.md#4-利用サービス設定サービス)
-- [API設計仕様書](../../docs/arch/api/api-specification.md#4-利用サービス設定サービス-api)
+- [コンポーネント設計](./docs/component-design.md)
+- [API設計仕様書](./docs/api-specification.md)
+- [API共通仕様](../../docs/arch/api/api-specification.md)
 - [データ設計](../../docs/arch/data/data-model.md#23-サービス管理データモデル)
 - [アーキテクチャ概要](../../docs/arch/overview.md)
+- [IaC定義](./infra/container-app.bicep)
 
 ## ライセンス
 

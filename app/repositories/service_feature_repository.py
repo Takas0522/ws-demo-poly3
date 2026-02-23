@@ -38,7 +38,8 @@ class ServiceFeatureRepository:
                 "tenant_services")
             logger.info("Service feature repository initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize service feature repository: {e}")
+            logger.error(
+                f"Failed to initialize service feature repository: {e}")
             raise
 
     async def close(self):
@@ -57,7 +58,8 @@ class ServiceFeatureRepository:
         except exceptions.CosmosResourceNotFoundError:
             return False
         except Exception as e:
-            logger.error(f"Failed to check service existence {service_id}: {e}")
+            logger.error(
+                f"Failed to check service existence {service_id}: {e}")
             raise
 
     async def get_features_by_service_id(self, service_id: str) -> List[ServiceFeature]:
@@ -73,7 +75,8 @@ class ServiceFeatureRepository:
                 items.append(ServiceFeature(**item))
             return items
         except Exception as e:
-            logger.error(f"Failed to get features for service {service_id}: {e}")
+            logger.error(
+                f"Failed to get features for service {service_id}: {e}")
             raise
 
     async def get_feature_by_id(self, feature_id: str, service_id: str) -> Optional[ServiceFeature]:
@@ -110,7 +113,8 @@ class ServiceFeatureRepository:
                 items.append(TenantServiceFeature(**item))
             return items
         except Exception as e:
-            logger.error(f"Failed to get tenant feature settings for tenant {tenant_id}, service {service_id}: {e}")
+            logger.error(
+                f"Failed to get tenant feature settings for tenant {tenant_id}, service {service_id}: {e}")
             raise
 
     async def upsert_tenant_feature(self, tenant_feature: TenantServiceFeature) -> TenantServiceFeature:
@@ -123,7 +127,8 @@ class ServiceFeatureRepository:
             logger.info(f"Tenant feature upserted: {tenant_feature.id}")
             return tenant_feature
         except Exception as e:
-            logger.error(f"Failed to upsert tenant feature {tenant_feature.id}: {e}")
+            logger.error(
+                f"Failed to upsert tenant feature {tenant_feature.id}: {e}")
             raise
 
     async def get_tenant_service(self, tenant_id: str, service_id: str) -> Optional[dict]:
@@ -145,7 +150,8 @@ class ServiceFeatureRepository:
                 return item
             return None
         except Exception as e:
-            logger.error(f"Failed to get tenant service for tenant {tenant_id}, service {service_id}: {e}")
+            logger.error(
+                f"Failed to get tenant service for tenant {tenant_id}, service {service_id}: {e}")
             raise
 
 

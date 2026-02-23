@@ -5,6 +5,7 @@ import logging
 from app.config import get_settings
 from app.api.v1 import health, services
 from app.repositories.service_repository import service_repository
+from app.repositories.service_feature_repository import service_feature_repository
 from app.utils.telemetry import setup_telemetry
 
 # Configure logging
@@ -45,12 +46,14 @@ async def startup_event():
     logger.info(f"Starting {settings.service_name} on port {settings.port}")
     logger.info(f"Cosmos DB Endpoint: {settings.cosmos_db_endpoint}")
     logger.info(f"Database: {settings.cosmos_db_database}")
-    # Initialize repository
+    # Initialize repositories
     await service_repository.initialize()
+    await service_feature_repository.initialize()
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info(f"Shutting down {settings.service_name}")
-    # Close repository
+    # Close repositories
     await service_repository.close()
+    await service_feature_repository.close()

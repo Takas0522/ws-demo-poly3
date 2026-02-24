@@ -38,3 +38,5 @@ Thumbs.db
 
 # mypy
 .mypy_cache/
+
+/temp

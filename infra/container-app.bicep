@@ -106,7 +106,7 @@ resource serviceSettingApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'service-setting'
-          image: '${containerRegistryLoginServer}/service-setting:latest'
+          image: '${containerRegistryLoginServer}/service-setting-service:latest'
           env: [
             { name: 'SERVICE_NAME', value: 'service-setting-service' }
             { name: 'PORT', value: '8003' }

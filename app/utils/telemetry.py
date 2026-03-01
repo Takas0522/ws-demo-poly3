@@ -13,13 +13,14 @@ import logging
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
+from opentelemetry.sdk.resources import Resource
 
 logger = logging.getLogger(__name__)
 
 _is_configured = False
 
 
-def setup_telemetry(app: FastAPI, connection_string: str | None = None) -> None:
+def setup_telemetry(app: FastAPI, connection_string: str | None = None, cloud_role_name: str = "unknown") -> None:
     """
     Application Insights テレメトリの初期化と集約例外ハンドラの登録。
 
@@ -28,6 +29,7 @@ def setup_telemetry(app: FastAPI, connection_string: str | None = None) -> None:
         connection_string: Application Insights 接続文字列。
             未設定の場合、App Insights への送信はスキップされるが、
             集約例外ハンドラは登録される。
+        cloud_role_name: Application Insights の cloud_RoleName に設定する値。
     """
     global _is_configured
 
@@ -36,7 +38,10 @@ def setup_telemetry(app: FastAPI, connection_string: str | None = None) -> None:
         try:
             from azure.monitor.opentelemetry import configure_azure_monitor
 
-            configure_azure_monitor(connection_string=connection_string)
+            configure_azure_monitor(
+                connection_string=connection_string,
+                resource=Resource.create({"service.name": cloud_role_name}),
+            )
             _is_configured = True
             logger.info("Application Insights テレメトリを初期化しました")
         except ImportError:

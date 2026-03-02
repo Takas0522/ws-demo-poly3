@@ -24,13 +24,18 @@ class ServiceRepository:
     async def initialize(self):
         """Initialize Cosmos DB client and containers"""
         try:
-            self.client = CosmosClient(
-                settings.cosmos_db_endpoint,
-                settings.cosmos_db_key,
+            kwargs = dict(
                 connection_verify=settings.cosmos_db_connection_verify,
-                connection_mode="Gateway",  # エミュレーター用にGatewayモードを使用
-                enable_endpoint_discovery=False  # IPリダイレクトを無効化
+                connection_mode="Gateway",
+                enable_endpoint_discovery=False,
             )
+            if settings.cosmos_db_key:
+                self.client = CosmosClient(
+                    settings.cosmos_db_endpoint, settings.cosmos_db_key, **kwargs)
+            else:
+                from azure.identity.aio import DefaultAzureCredential
+                self.client = CosmosClient(
+                    settings.cosmos_db_endpoint, DefaultAzureCredential(), **kwargs)
             self.database = self.client.get_database_client(
                 settings.cosmos_db_database)
             self.services_container = self.database.get_container_client(

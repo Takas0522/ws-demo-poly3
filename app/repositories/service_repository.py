@@ -33,9 +33,9 @@ class ServiceRepository:
                 self.client = CosmosClient(
                     settings.cosmos_db_endpoint, settings.cosmos_db_key, **kwargs)
             else:
-                from azure.identity.aio import DefaultAzureCredential
+                from azure.identity.aio import ManagedIdentityCredential
                 self.client = CosmosClient(
-                    settings.cosmos_db_endpoint, DefaultAzureCredential(), **kwargs)
+                    settings.cosmos_db_endpoint, ManagedIdentityCredential(), **kwargs)
             self.database = self.client.get_database_client(
                 settings.cosmos_db_database)
             self.services_container = self.database.get_container_client(
